@@ -15,3 +15,9 @@ pub fn main() !void {
 
     try files.list();
 }
+
+test {
+    _ = @import("files.zig");
+
+    std.testing.refAllDecls(@This());
+}

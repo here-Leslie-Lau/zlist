@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const testing = std.testing;
 
 const file = @import("file.zig");
 
@@ -31,8 +32,8 @@ pub const Files = struct {
 
         var it = dir.iterate();
         while (try it.next(io)) |entry| {
-            // TODO leslie: add sub_path support
             const fs = (try file.File.init(io, &entry, &dir, .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden })) orelse continue;
+
             try files.append(allocator, fs);
         }
 
@@ -155,3 +156,25 @@ pub const Files = struct {
         }
     }
 };
+
+test "get_detail_permissions" {
+    const cwd = std.Io.Dir.cwd();
+    const dir = try cwd.openDir(testing.io, ".", .{ .iterate = true });
+
+    const allocator = std.testing.allocator;
+
+    const io = testing.io;
+
+    var files = try Files.init(
+        allocator,
+        io,
+        dir,
+        .{ .show_detail = true },
+    );
+    defer files.deinit();
+
+    for (files.items.items) |val| {
+        var perm_buf: [10]u8 = undefined;
+        try testing.expect(val.getPermissions(&perm_buf).len > 0);
+    }
+}

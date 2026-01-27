@@ -16,7 +16,6 @@ pub const File = struct {
         show_detail: bool = false,
         /// show hidden files
         show_hidden: bool = false,
-        sub_path: []const u8 = ".",
     };
 
     /// Initialize a File from a directory entry.
@@ -44,7 +43,7 @@ pub const File = struct {
 
         if (opt.show_detail) {
             // read more file details
-            const stat = try dir.statFile(io, opt.sub_path, .{});
+            const stat = try dir.statFile(io, file.name, .{});
             file.stat = stat;
         }
 
@@ -78,14 +77,13 @@ pub const File = struct {
     }
 
     pub inline fn getPermissions(self: Self, buf: *[10]u8) []const u8 {
-        if (!self.stat) {
+        if (self.stat == null) {
             // unknown permissions
             @memset(buf, '-');
             return buf[0..10];
         }
 
         buf[0] = switch (self.stat.?.kind) {
-            // block_device,
             .directory => 'd',
             .sym_link => 'l',
             .unix_domain_socket => 's',
