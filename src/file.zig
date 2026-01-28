@@ -121,4 +121,30 @@ pub const File = struct {
         }
         return buf;
     }
+
+    const NameByID = enum {
+        User,
+        Group,
+    };
+
+    /// get user name by user ID (uid or gid)
+    pub inline fn getNameByID(name: NameByID) []const u8 {
+        switch (name) {
+            .User => std.c.getpwuid(std.c.uid_t),
+            .Group => std.c.getgrgid(std.c.gid_t),
+        }
+    }
+
+    /// convert size in bytes to human-readable format
+    pub fn humanSize(size: u64, buf: []u8) ![]u8 {
+        const units = [_][]const u8{ "B", "K", "M", "G", "T" };
+
+        var sz: f64 = @floatFromInt(size);
+        var i: usize = 0;
+        while (sz >= 1024.0 and i < units.len - 1) : (i += 1) {
+            sz /= 1024.0;
+        }
+
+        return std.fmt.bufPrint(buf, "{d:.1}{s}", .{ sz, units[i] });
+    }
 };
