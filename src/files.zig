@@ -157,18 +157,20 @@ pub const Files = struct {
     }
 };
 
-test "get_detail_permissions" {
-    const cwd = std.Io.Dir.cwd();
-    const dir = try cwd.openDir(testing.io, ".", .{ .iterate = true });
-
-    const allocator = std.testing.allocator;
-
+test "get_detail" {
     const io = testing.io;
+
+    var tmp_dir = testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "test1.txt", .data = "hello 1" });
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "test2.txt", .data = "hello 2" });
+
+    const allocator = testing.allocator;
 
     var files = try Files.init(
         allocator,
         io,
-        dir,
+        tmp_dir.dir,
         .{ .show_detail = true },
     );
     defer files.deinit();
@@ -176,5 +178,10 @@ test "get_detail_permissions" {
     for (files.items.items) |val| {
         var perm_buf: [10]u8 = undefined;
         try testing.expect(val.getPermissions(&perm_buf).len > 0);
+
+        var size_buf: [32]u8 = undefined;
+        var time_buf: [32]u8 = undefined;
+
+        std.debug.print("{s} {s} {s} {s}\n", .{ perm_buf[0..], try val.humanSize(&size_buf), try val.formatTime(&time_buf), val.name });
     }
 }

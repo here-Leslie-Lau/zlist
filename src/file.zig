@@ -136,15 +136,41 @@ pub const File = struct {
     }
 
     /// convert size in bytes to human-readable format
-    pub fn humanSize(size: u64, buf: []u8) ![]u8 {
+    pub inline fn humanSize(self: Self, buf: []u8) ![]u8 {
         const units = [_][]const u8{ "B", "K", "M", "G", "T" };
 
-        var sz: f64 = @floatFromInt(size);
+        var sz: f64 = @floatFromInt(self.stat.?.size);
         var i: usize = 0;
         while (sz >= 1024.0 and i < units.len - 1) : (i += 1) {
             sz /= 1024.0;
         }
 
         return std.fmt.bufPrint(buf, "{d:.1}{s}", .{ sz, units[i] });
+    }
+
+    /// format modification time to string
+    pub inline fn formatTime(self: Self, buf: []u8) ![]u8 {
+        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(self.stat.?.mtime.toSeconds()) };
+        const epoch_day = epoch_seconds.getEpochDay();
+        const year_day = epoch_day.calculateYearDay();
+        const month_day = year_day.calculateMonthDay();
+        const day_seconds = epoch_seconds.getDaySeconds();
+        const year = year_day.year;
+        // month_day.month.numeric() 返回 1-12，数组索引需要 0-11
+        const month_index = @as(usize, month_day.month.numeric()) - 1;
+        const day = month_day.day_index + 1; // day_index 是从 0 开始的
+        const hour = day_seconds.getHoursIntoDay();
+        const min = day_seconds.getMinutesIntoHour();
+        const sec = day_seconds.getSecondsIntoMinute();
+        const month_names = [_][]const u8{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        //  %b %d %H:%M:%S %Y in C Language
+        return std.fmt.bufPrint(buf, "{s} {d} {d:0>2}:{d:0>2}:{d:0>2} UTC {d}", .{
+            month_names[month_index],
+            day,
+            hour,
+            min,
+            sec,
+            year,
+        });
     }
 };
