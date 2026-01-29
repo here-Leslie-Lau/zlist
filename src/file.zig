@@ -10,6 +10,8 @@ pub const File = struct {
     name: []const u8,
 
     stat: ?std.Io.Dir.Stat,
+    username: []const u8,
+    groupname: []const u8,
 
     pub const Options = struct {
         /// show detail mode
@@ -39,12 +41,23 @@ pub const File = struct {
             .is_exec = false,
             .name = entry.name,
             .stat = null,
+            .username = "",
+            .groupname = "",
         };
 
         if (opt.show_detail) {
             // read more file details
             const stat = try dir.statFile(io, file.name, .{});
             file.stat = stat;
+
+            const f = try dir.openFile(io, file.name, .{});
+            defer f.close(io);
+
+            var c_stat: std.c.Stat = undefined;
+            if (std.c.fstat(f.handle, &c_stat) == 0 and builtin.os.tag != .windows) {
+                file.username = file.getNameByID(.User, c_stat.uid) orelse "UNKNOWN";
+                file.groupname = file.getNameByID(.Group, c_stat.gid) orelse "UNKNOWN";
+            }
         }
 
         return file;
@@ -122,16 +135,30 @@ pub const File = struct {
         return buf;
     }
 
-    const NameByID = enum {
+    pub const NameByID = enum {
         User,
         Group,
     };
 
     /// get user name by user ID (uid or gid)
-    pub inline fn getNameByID(name: NameByID) []const u8 {
+    pub inline fn getNameByID(_: Self, name: NameByID, id: u32) ?[]const u8 {
         switch (name) {
-            .User => std.c.getpwuid(std.c.uid_t),
-            .Group => std.c.getgrgid(std.c.gid_t),
+            .User => {
+                const uid: std.c.uid_t = @intCast(id);
+                const passwd_ptr = std.c.getpwuid(uid);
+                if (passwd_ptr == null) {
+                    return null;
+                }
+                return std.mem.span(passwd_ptr.?.*.name);
+            },
+            .Group => {
+                const gid: std.c.gid_t = @intCast(id);
+                const group_ptr = std.c.getgrgid(gid);
+                if (group_ptr == null) {
+                    return null;
+                }
+                return std.mem.span(group_ptr.?.*.name);
+            },
         }
     }
 

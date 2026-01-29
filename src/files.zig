@@ -83,6 +83,7 @@ pub const Files = struct {
         self.icon_map.deinit();
     }
 
+    /// list files in simple mode
     pub fn list(self: Self) !void {
         // stdout
         var stdout_buf: [1024]u8 = undefined;
@@ -155,6 +156,35 @@ pub const Files = struct {
             }
         }
     }
+
+    /// list files in detail mode
+    pub fn listDetail(self: Self) !void {
+        // stdout
+        var stdout_buf: [1024]u8 = undefined;
+        const stdout_file = std.Io.File.stdout();
+        var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
+
+        const stdout = &stdout_writer.interface;
+
+        var perm_buf: [10]u8 = undefined;
+        var size_buf: [32]u8 = undefined;
+        var time_buf: [32]u8 = undefined;
+
+        for (self.items.items) |val| {
+            try stdout.print("  {s}{s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s} \x1b[0m\n", .{
+                val.getColor(),
+                val.getPermissions(&perm_buf),
+                val.username,
+                val.groupname,
+                try val.humanSize(&size_buf),
+                try val.formatTime(&time_buf),
+                self.getIcon(val),
+                val.name,
+            });
+        }
+
+        try stdout.flush();
+    }
 };
 
 test "get_detail" {
@@ -164,6 +194,8 @@ test "get_detail" {
     defer tmp_dir.cleanup();
     try tmp_dir.dir.writeFile(io, .{ .sub_path = "test1.txt", .data = "hello 1" });
     try tmp_dir.dir.writeFile(io, .{ .sub_path = "test2.txt", .data = "hello 2" });
+
+    try tmp_dir.dir.createDirPath(io, "sub_dir");
 
     const allocator = testing.allocator;
 
@@ -175,13 +207,5 @@ test "get_detail" {
     );
     defer files.deinit();
 
-    for (files.items.items) |val| {
-        var perm_buf: [10]u8 = undefined;
-        try testing.expect(val.getPermissions(&perm_buf).len > 0);
-
-        var size_buf: [32]u8 = undefined;
-        var time_buf: [32]u8 = undefined;
-
-        std.debug.print("{s} {s} {s} {s}\n", .{ perm_buf[0..], try val.humanSize(&size_buf), try val.formatTime(&time_buf), val.name });
-    }
+    try files.listDetail();
 }
