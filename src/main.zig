@@ -8,8 +8,9 @@ const io = threaded.io();
 
 const params_desc: []const u8 = blk: {
     break :blk 
-    \\-h, --help    Display this help and exit.
-    \\-l, --l       List files in the long format.
+    \\-h, --help    Usage: ls [OPTIONS: -l -a] [Directory]
+    \\-l, --long    List files in the long format.
+    \\-a, --a       Include directory entries whose names begin with a dot (‘.’).
     \\
     ;
 };
@@ -29,20 +30,34 @@ pub fn main(init: std.process.Init) !void {
         },
     );
 
+    var show_hidden: bool = false;
+    var show_detail: bool = false;
+    const path: []const u8 = ".";
+
     if (res.args.help != 0) {
         // show hellp msg
         std.debug.print("{s}\n", .{params_desc});
         return;
+    } else if (res.args.long != 0) {
+        // set long listing mode
+        show_detail = true;
+    } else if (res.args.a != 0) {
+        // show hidden files
+        show_hidden = true;
     }
-    // TODO leslie: get command line options
+    // TODO leslie: get file path from args
 
     const cwd = std.Io.Dir.cwd();
-    const dir = try cwd.openDir(io, ".", .{ .iterate = true });
+    const dir = try cwd.openDir(io, path, .{ .iterate = true });
 
-    var files = try fs.Files.init(allocator, io, dir, .{});
+    var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden });
     defer files.deinit();
 
-    try files.list();
+    if (show_detail) {
+        try files.listDetail();
+    } else {
+        try files.list();
+    }
 }
 
 test {

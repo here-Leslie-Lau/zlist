@@ -31,7 +31,12 @@ pub const Files = struct {
 
         var it = dir.iterate();
         while (try it.next(io)) |entry| {
-            const fs = (try file.File.init(io, &entry, &dir, .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden })) orelse continue;
+            var fs = (try file.File.init(io, &entry, &dir, .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden })) orelse continue;
+
+            // copy name
+            var name: []const u8 = undefined;
+            name = try allocator.dupe(u8, entry.name);
+            fs.name = name;
 
             try files.append(allocator, fs);
         }
@@ -48,6 +53,10 @@ pub const Files = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        for (self.items.items) |item| {
+            self.allocator.free(item.name);
+        }
+
         self.items.deinit(self.allocator);
     }
 
