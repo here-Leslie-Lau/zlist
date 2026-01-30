@@ -11,6 +11,7 @@ const params_desc: []const u8 = blk: {
     \\-h, --help    Usage: ls [OPTIONS: -l -a] [Directory]
     \\-l, --long    List files in the long format.
     \\-a, --a       Include directory entries whose names begin with a dot (‘.’).
+    \\<str>...
     \\
     ;
 };
@@ -32,7 +33,7 @@ pub fn main(init: std.process.Init) !void {
 
     var show_hidden: bool = false;
     var show_detail: bool = false;
-    const path: []const u8 = ".";
+    var path: []const u8 = ".";
 
     if (res.args.help != 0) {
         // show hellp msg
@@ -45,7 +46,11 @@ pub fn main(init: std.process.Init) !void {
         // show hidden files
         show_hidden = true;
     }
-    // TODO leslie: get file path from args
+
+    // get file path from args
+    if (res.positionals[0].len > 0) {
+        path = res.positionals[0][0];
+    }
 
     const cwd = std.Io.Dir.cwd();
     const dir = try cwd.openDir(io, path, .{ .iterate = true });
