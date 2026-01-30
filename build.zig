@@ -17,6 +17,15 @@ pub fn build(b: *std.Build) void {
             .root_module = mod,
         });
 
+        // add clap as a dependency
+        const clap = b.addModule(
+            "clap",
+            .{
+                .root_source_file = b.path("libs/clap/clap.zig"),
+            },
+        );
+        exe.root_module.addImport("clap", clap);
+
         b.installArtifact(exe);
     }
 
