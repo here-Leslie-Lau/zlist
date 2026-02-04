@@ -13,7 +13,7 @@ pub const Files = struct {
         /// show hidden files
         show_hidden: bool = false,
         /// show recursive
-        show_recursive: bool = false,
+        recursive: bool = false,
         /// sort type: 0=name(asc), 1=name length(asc)
         sort_type: u8 = 0,
     };

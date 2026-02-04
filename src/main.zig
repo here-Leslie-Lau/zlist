@@ -8,10 +8,11 @@ const io = threaded.io();
 
 const params_desc: []const u8 = blk: {
     break :blk 
-    \\-h, --help          Usage: ls [OPTIONS: -l -a] [Directory]
+    \\-h, --help          Usage: ls [OPTIONS: -l -a -s1 ...] [Directory]
     \\-l, --long          List files in the long format.
     \\-a, --a             Include directory entries whose names begin with a dot (‘.’).
     \\-s, --sort <u8>     Sort results. Options: 0-name(asc, Default) 1-name length(asc).
+    \\-r, --recursive     Recursively list subdirectories encountered.
     \\<str>...
     \\
     ;
@@ -34,6 +35,7 @@ pub fn main(init: std.process.Init) !void {
 
     var show_hidden: bool = false;
     var show_detail: bool = false;
+    var recursive: bool = false;
     var sort_type: u8 = 0;
     var path: []const u8 = ".";
 
@@ -55,6 +57,10 @@ pub fn main(init: std.process.Init) !void {
     if (res.args.sort) |sort| {
         sort_type = sort;
     }
+    if (res.args.recursive != 0) {
+        // set recursive mode
+        recursive = true;
+    }
 
     // get file path from args
     if (res.positionals[0].len > 0) {
@@ -65,7 +71,7 @@ pub fn main(init: std.process.Init) !void {
     const dir = try cwd.openDir(io, path, .{ .iterate = true });
     defer dir.close(io);
 
-    var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type });
+    var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive });
     defer files.deinit();
 
     if (show_detail) {
@@ -73,6 +79,7 @@ pub fn main(init: std.process.Init) !void {
     } else {
         try files.list();
     }
+    // TODO leslie: handle recursive listing
 }
 
 test {
