@@ -71,15 +71,15 @@ pub const File = struct {
         return lhs.name.len < rhs.name.len;
     }
 
-    const Color = struct {
-        const reset = "\x1b[0m";
-        const light_blue = "\x1b[94m";
-        const light_green = "\x1b[92m";
-        const cyan = "\x1b[36m";
-        const light_magenta = "\x1b[95m";
-        const light_yellow = "\x1b[93m";
-        const red = "\x1b[31m";
-        const white = "\x1b[37m";
+    pub const Color = struct {
+        pub const reset = "\x1b[0m";
+        pub const light_blue = "\x1b[94m";
+        pub const light_green = "\x1b[92m";
+        pub const cyan = "\x1b[36m";
+        pub const light_magenta = "\x1b[95m";
+        pub const light_yellow = "\x1b[93m";
+        pub const red = "\x1b[31m";
+        pub const white = "\x1b[37m";
     };
 
     pub inline fn getColor(self: Self) []const u8 {
