@@ -196,14 +196,10 @@ pub const Files = struct {
     }
 
     /// list files recursively
-    pub fn listRecursive(self: Self, prefix: []const u8) !void {
-        // stdout
-        var stdout_buf: [1024]u8 = undefined;
-        const stdout_file = std.Io.File.stdout();
-        var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
-
-        const stdout = &stdout_writer.interface;
-        try stdout.print(".\n", .{});
+    pub fn listRecursive(self: Self, writer: anytype, prefix: []const u8, first: bool, dir: std.Io.Dir) !void {
+        if (first) {
+            try writer.print(".\n", .{});
+        }
 
         const total = self.items.items.len;
 
@@ -212,7 +208,7 @@ pub const Files = struct {
             const connector = if (is_last) "└──" else "├──";
 
             // first print the current file/directory
-            try stdout.print("{s}{s}{s}\x1b[0m {s}{s} {s} \x1b[0m\n", .{
+            try writer.print("{s}{s}{s}\x1b[0m {s}{s} {s} \x1b[0m\n", .{
                 file.File.Color.light_blue,
                 prefix,
                 connector,
@@ -222,11 +218,26 @@ pub const Files = struct {
             });
 
             if (val.is_dir) {
-                // TODO leslie: implement recursive listing
+                const sub_dir = try dir.openDir(self.io, val.name, .{ .iterate = true });
+                defer sub_dir.close(self.io);
+
+                var sub_files = try Files.init(
+                    self.allocator,
+                    self.io,
+                    sub_dir,
+                    self.opt,
+                );
+                defer sub_files.deinit();
+
+                // recursive itself
+                const child_connector = if (is_last) "    " else "│   ";
+                const new_prefix = try std.fmt.allocPrint(self.allocator, "{s}{s}", .{ prefix, child_connector });
+
+                try sub_files.listRecursive(writer, new_prefix, false, sub_dir);
+
+                self.allocator.free(new_prefix);
             }
         }
-
-        try stdout.flush();
     }
 };
 
@@ -262,8 +273,16 @@ test "recursive" {
     try tmp_dir.dir.writeFile(io, .{ .sub_path = "test2.txt", .data = "hello 2" });
 
     try tmp_dir.dir.createDirPath(io, "sub_dir");
+    var tmp_sub_dir = try tmp_dir.dir.openDir(io, "sub_dir", .{ .iterate = true });
+    defer tmp_sub_dir.close(io);
+    _ = try tmp_sub_dir.createFile(io, "sub_test1.txt", .{});
 
     const allocator = testing.allocator;
+
+    // stdout
+    var stdout_buf: [1024]u8 = undefined;
+    const stdout_file = std.Io.File.stdout();
+    var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
     var files = try Files.init(
         allocator,
@@ -273,5 +292,6 @@ test "recursive" {
     );
     defer files.deinit();
 
-    try files.listRecursive("");
+    try files.listRecursive(&stdout_writer.interface, "", true, tmp_dir.dir);
+    try stdout_writer.interface.flush();
 }
