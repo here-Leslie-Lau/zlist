@@ -76,6 +76,19 @@ pub fn main(init: std.process.Init) !void {
     var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive });
     defer files.deinit();
 
+    if (files.items.items.len == 0) {
+        // no files to show
+        // stdout
+        var stdout_buf: [1024]u8 = undefined;
+        const stdout_file = std.Io.File.stdout();
+        var stdout_writer = stdout_file.writer(io, &stdout_buf);
+
+        try stdout_writer.interface.print("\n\x1b[93m No files to show.\x1b[0m\n", .{});
+        try stdout_writer.interface.flush();
+
+        return;
+    }
+
     if (show_detail) {
         // ls -l
         try files.listDetail();
