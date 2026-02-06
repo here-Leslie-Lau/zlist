@@ -22,6 +22,7 @@
 
 ![Preview1](pics/screenshot.jpg)
 ![Preview2](pics/screenshot2.jpg)
+![Preview3](pics/screenshot3.jpg)
 
 *(Make sure you have a [Nerd Font](https://www.nerdfonts.com/) installed in your terminal to see the icons!)*
 
@@ -60,6 +61,7 @@ ls [OPTIONS] [PATH]
 | `-l`, `--long` | Enable detailed view (permissions, size, date, user). |
 | `-a`, `--a` | Show hidden files (starting with `.`). |
 | `-s`, `--sort <mode>` | **0**: Name (A-Z) [Default]<br>**1**: Name Length (Shortest first) |
+| `-r`, `--recursive` | Recursively list subdirectories encountered. |
 | `-h`, `--help` | Print help message. |
 
 ### Examples
@@ -79,13 +81,18 @@ ls -la
 ls -s 1
 ```
 
+**Dig deep (Recursive listing):**
+```bash
+ls -r
+```
+
 ## 🛣 Roadmap
 
 *   [x] Basic file listing & recursion
 *   [x] Color output & Nerd Font icons
 *   [x] Detailed file stats
 *   [x] Sorting by name length
-*   [ ] Recursive directory traversal (`-R`)
+*   [x] Recursive directory traversal (`-r`)
 
 ## 🤝 Contributing
 
