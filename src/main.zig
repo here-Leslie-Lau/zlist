@@ -60,6 +60,8 @@ pub fn main(init: std.process.Init) !void {
     if (res.args.recursive != 0) {
         // set recursive mode
         recursive = true;
+        // no necessity to show detail in recursive mode
+        show_detail = false;
     }
 
     // get file path from args
@@ -75,11 +77,21 @@ pub fn main(init: std.process.Init) !void {
     defer files.deinit();
 
     if (show_detail) {
+        // ls -l
         try files.listDetail();
+    } else if (recursive) {
+        // ls -r
+        // stdout
+        var stdout_buf: [1024]u8 = undefined;
+        const stdout_file = std.Io.File.stdout();
+        var stdout_writer = stdout_file.writer(io, &stdout_buf);
+
+        try files.listRecursive(&stdout_writer.interface, "", true, dir);
+        try stdout_writer.interface.flush();
     } else {
+        // just ls command
         try files.list();
     }
-    // TODO leslie: handle recursive listing
 }
 
 test {
