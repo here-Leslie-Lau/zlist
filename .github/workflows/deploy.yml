@@ -1,0 +1,19 @@
+name: release # 任务名称
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: master
+      - name: Build
+        run: |
+          zig build -Doptimize=ReleaseFast

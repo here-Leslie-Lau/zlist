@@ -24,6 +24,7 @@ pub fn build(b: *std.Build) void {
             "clap",
             .{
                 .root_source_file = b.path("libs/clap/clap.zig"),
+                .link_libc = true,
             },
         );
         exe.root_module.addImport("clap", clap);
