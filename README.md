@@ -30,7 +30,9 @@
 
 ### Precompiled Binaries
 
-*TODO, coming soon!*
+Download the latest binary for your system from the [Releases](https://github.com/here-Leslie-Lau/zlist/releases) page.
+
+> **Note**: Windows is currently **not supported** due to differences in file system APIs. Support may be added in future versions.
 
 ### From Source
 
