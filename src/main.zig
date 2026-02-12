@@ -110,8 +110,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
         var stdout_buf: [1024]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(io, &stdout_buf);
+        // get term
+        const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
-        try files.listRecursive(&stdout_writer.interface, "", true, dir);
+        try files.listRecursive(term, "", true, dir);
         try stdout_writer.interface.flush();
     } else {
         // just ls command

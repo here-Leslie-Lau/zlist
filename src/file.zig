@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const Terminal = std.Io.Terminal;
 const builtin = @import("builtin");
 
 pub const File = struct {
@@ -70,27 +71,16 @@ pub const File = struct {
         return lhs.name.len < rhs.name.len;
     }
 
-    pub const Color = struct {
-        pub const reset = "\x1b[0m";
-        pub const light_blue = "\x1b[94m";
-        pub const light_green = "\x1b[92m";
-        pub const cyan = "\x1b[36m";
-        pub const light_magenta = "\x1b[95m";
-        pub const light_yellow = "\x1b[93m";
-        pub const red = "\x1b[31m";
-        pub const white = "\x1b[37m";
-    };
-
-    pub inline fn getColor(self: Self) []const u8 {
+    pub inline fn getColor(self: Self) Terminal.Color {
         // TODO: add more colors based on file type
         if (self.is_dir) {
             // blue (directory)
-            return Color.light_blue;
+            return Terminal.Color.bright_blue;
         } else if (std.mem.eql(u8, ".md", std.fs.path.extension(self.name))) {
-            return Color.light_magenta;
+            return Terminal.Color.bright_magenta;
         } else {
             // default file color
-            return Color.light_yellow;
+            return Terminal.Color.bright_yellow;
         }
     }
 

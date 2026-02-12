@@ -88,6 +88,8 @@ pub const Files = struct {
         var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
 
         const stdout = &stdout_writer.interface;
+        // get term
+        const term = try self.getTerminal(stdout, stdout_file);
 
         const max_display_len = self.getMaxDisplayLen();
         const term_width = self.getTerminalWidth(stdout_file.handle);
@@ -100,17 +102,25 @@ pub const Files = struct {
         for (self.items.items, 0..) |val, i| {
             const icon = self.getIcon(val.is_dir, val.name);
 
+            // set color
+            try term.setColor(val.getColor());
             // print item
-            try stdout.print("  {s}{s} {s:<[3]}\x1b[0m", .{ val.getColor(), icon, val.name, max_display_len - icon.len + 1 });
+            try term.writer.print("  {s} {s:<[2]}", .{
+                icon,
+                val.name,
+                max_display_len - icon.len + 1,
+            });
+            // reset color
+            try term.setColor(Terminal.Color.reset);
 
             // make sure to print newline after each row
             if ((i + 1) % cols == 0) {
-                try stdout.print("\n", .{});
+                try term.writer.print("\n", .{});
             }
         }
 
-        try stdout.print("\n", .{});
-        try stdout.flush();
+        try term.writer.print("\n", .{});
+        try term.writer.flush();
     }
 
     /// get terminal width
@@ -182,14 +192,17 @@ pub const Files = struct {
         var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
 
         const stdout = &stdout_writer.interface;
+        // get term
+        const term = try self.getTerminal(stdout, stdout_file);
 
         var perm_buf: [10]u8 = undefined;
         var size_buf: [32]u8 = undefined;
         var time_buf: [32]u8 = undefined;
 
         for (self.items.items) |val| {
-            try stdout.print("  {s}{s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s} \x1b[0m\n", .{
-                val.getColor(),
+            // first, set color
+            try term.setColor(val.getColor());
+            try term.writer.print("  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}", .{
                 val.getPermissions(&perm_buf),
                 val.username,
                 val.groupname,
@@ -198,15 +211,25 @@ pub const Files = struct {
                 self.getIcon(val.is_dir, val.name),
                 val.name,
             });
+
+            // reset color
+            try term.setColor(Terminal.Color.reset);
+            try term.writer.print("\n", .{});
         }
 
-        try stdout.flush();
+        try term.writer.flush();
     }
 
     /// list files recursively
-    pub fn listRecursive(self: Self, writer: anytype, prefix: []const u8, first: bool, dir: std.Io.Dir) !void {
+    pub fn listRecursive(
+        self: Self,
+        term: Terminal,
+        prefix: []const u8,
+        first: bool,
+        dir: std.Io.Dir,
+    ) !void {
         if (first) {
-            try writer.print(".\n", .{});
+            try term.writer.print(".\n", .{});
         }
 
         const total = self.items.items.len;
@@ -215,15 +238,22 @@ pub const Files = struct {
             const is_last = (i == total - 1);
             const connector = if (is_last) "└──" else "├──";
 
-            // first print the current file/directory
-            try writer.print("{s}{s}{s}\x1b[0m {s}{s} {s} \x1b[0m\n", .{
-                file.File.Color.light_blue,
+            // set color for prefix and connector
+            try term.setColor(Terminal.Color.bright_blue);
+            try term.writer.print("{s}{s}", .{
                 prefix,
                 connector,
-                val.getColor(),
+            });
+            // reset color
+            try term.setColor(Terminal.Color.reset);
+
+            // print file/directory name
+            try term.setColor(val.getColor());
+            try term.writer.print(" {s} {s}\n", .{
                 self.getIcon(val.is_dir, val.name),
                 val.name,
             });
+            try term.setColor(Terminal.Color.reset);
 
             if (val.is_dir) {
                 const sub_dir = try dir.openDir(self.io, val.name, .{ .iterate = true });
@@ -241,7 +271,7 @@ pub const Files = struct {
                 const child_connector = if (is_last) "    " else "│   ";
                 const new_prefix = try std.fmt.allocPrint(self.allocator, "{s}{s}", .{ prefix, child_connector });
 
-                try sub_files.listRecursive(writer, new_prefix, false, sub_dir);
+                try sub_files.listRecursive(term, new_prefix, false, sub_dir);
 
                 self.allocator.free(new_prefix);
             }
@@ -309,6 +339,8 @@ test "recursive" {
     );
     defer files.deinit();
 
-    try files.listRecursive(&stdout_writer.interface, "", true, tmp_dir.dir);
+    const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
+
+    try files.listRecursive(term, "", true, tmp_dir.dir);
     try stdout_writer.interface.flush();
 }
