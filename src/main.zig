@@ -18,8 +18,14 @@ const params_desc: []const u8 = blk: {
     ;
 };
 
-pub fn main(init: std.process.Init) !void {
-    const allocator = std.heap.page_allocator;
+pub fn main(init: std.process.Init.Minimal) !void {
+    // get allocator
+    var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa_impl.deinit();
+    const gpa = gpa_impl.allocator();
+    var arena_impl = std.heap.ArenaAllocator.init(gpa);
+    defer arena_impl.deinit();
+    const allocator = arena_impl.allocator();
 
     // parse command line arguments
     const params = comptime clap.parseParamsComptime(params_desc);
@@ -27,7 +33,7 @@ pub fn main(init: std.process.Init) !void {
         clap.Help,
         &params,
         clap.parsers.default,
-        init.minimal.args,
+        init.args,
         .{
             .allocator = allocator,
         },

@@ -10,6 +10,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         // link libc to get access to the C standard library
         .link_libc = true,
+        // set single threaded mode
+        .single_threaded = true,
     });
 
     {

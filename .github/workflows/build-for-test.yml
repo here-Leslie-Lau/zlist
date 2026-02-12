@@ -20,4 +20,4 @@ jobs:
           version: master
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSmall
+          zig build -Doptimize=Debug
