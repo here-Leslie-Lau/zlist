@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const Terminal = std.Io.Terminal;
 const testing = std.testing;
 
 const file = @import("file.zig");
@@ -245,6 +246,15 @@ pub const Files = struct {
                 self.allocator.free(new_prefix);
             }
         }
+    }
+
+    /// get terminal info
+    pub inline fn getTerminal(self: Self, writer: anytype, f: std.Io.File) !Terminal {
+        const term_mode = try Terminal.Mode.detect(self.io, f, false, false);
+        return Terminal{
+            .mode = term_mode,
+            .writer = writer,
+        };
     }
 };
 
