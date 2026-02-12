@@ -1,0 +1,23 @@
+name: Development Build
+on:
+  push:
+    branches-ignore:
+      - 'main'
+
+jobs:
+  build:
+    name: Build for ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: master
+      - name: Build
+        run: |
+          zig build -Doptimize=ReleaseSmall
