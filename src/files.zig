@@ -83,7 +83,7 @@ pub const Files = struct {
     /// list files in simple mode
     pub fn list(self: Self) !void {
         // stdout
-        var stdout_buf: [1024]u8 = undefined;
+        var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
 
@@ -187,7 +187,7 @@ pub const Files = struct {
     /// list files in detail mode
     pub fn listDetail(self: Self) !void {
         // stdout
-        var stdout_buf: [1024]u8 = undefined;
+        var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
 
@@ -327,7 +327,7 @@ test "recursive" {
     const allocator = testing.allocator;
 
     // stdout
-    var stdout_buf: [1024]u8 = undefined;
+    var stdout_buf: [4096]u8 = undefined;
     const stdout_file = std.Io.File.stdout();
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
 

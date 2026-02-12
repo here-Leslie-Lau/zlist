@@ -91,7 +91,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     if (files.items.items.len == 0) {
         // no files to show
         // stdout
-        var stdout_buf: [1024]u8 = undefined;
+        var stdout_buf: [512]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
@@ -107,7 +107,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     } else if (recursive) {
         // ls -r
         // stdout
-        var stdout_buf: [1024]u8 = undefined;
+        var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(io, &stdout_buf);
         // get term
