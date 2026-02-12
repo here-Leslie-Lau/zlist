@@ -2,12 +2,6 @@ const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
 
-const c = @cImport({
-    @cInclude("unistd.h");
-    @cInclude("pwd.h");
-    @cInclude("grp.h");
-});
-
 pub const File = struct {
     const Self = @This();
     is_dir: bool,
@@ -155,21 +149,22 @@ pub const File = struct {
     pub inline fn getName(_: Self, name: NameByID) ?[]const u8 {
         switch (name) {
             .User => {
-                const uid = c.getuid();
-                const passwd = c.getpwuid(uid);
+                const uid = std.c.getuid();
+                const passwd = std.c.getpwuid(uid);
                 if (passwd == null) {
                     return null;
                 }
-                return std.mem.span(passwd.*.pw_name);
+
+                return std.mem.span(passwd.?.*.name);
             },
             .Group => {
-                const gid = c.getgid();
-                const group = c.getgrgid(gid);
+                const gid = std.c.getgid();
+                const group = std.c.getgrgid(gid);
                 if (group == null) {
                     return null;
                 }
 
-                return std.mem.span(group.*.gr_name);
+                return std.mem.span(group.?.*.name);
             },
         }
     }
