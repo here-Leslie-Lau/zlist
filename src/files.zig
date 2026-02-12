@@ -4,6 +4,13 @@ const testing = std.testing;
 
 const file = @import("file.zig");
 
+pub const SortType = enum {
+    /// sort by name(asc)
+    name,
+    /// sort by name length(asc)
+    length,
+};
+
 pub const Files = struct {
     const Self = @This();
 
@@ -14,8 +21,8 @@ pub const Files = struct {
         show_hidden: bool = false,
         /// show recursive
         recursive: bool = false,
-        /// sort type: 0=name(asc), 1=name length(asc)
-        sort_type: u8 = 0,
+        /// sort type
+        sort_type: SortType = .name,
     };
 
     allocator: mem.Allocator,
@@ -46,7 +53,7 @@ pub const Files = struct {
         }
 
         switch (opt.sort_type) {
-            1 => {
+            .length => {
                 // sort by name length
                 mem.sortUnstable(file.File, files.items, {}, file.File.nameLenLessThan);
             },

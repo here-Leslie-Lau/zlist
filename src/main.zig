@@ -8,11 +8,11 @@ const io = threaded.io();
 
 const params_desc: []const u8 = blk: {
     break :blk 
-    \\-h, --help          Usage: ls [OPTIONS: -l -a -s1 ...] [Directory]
-    \\-l, --long          List files in the long format.
-    \\-a, --a             Include directory entries whose names begin with a dot (‘.’).
-    \\-s, --sort <u8>     Sort results. Options: 0-name(asc, Default) 1-name length(asc).
-    \\-r, --recursive     Recursively list subdirectories encountered.
+    \\-h, --help                Usage: ls [OPTIONS: -l -a -s=length ...] [Directory]
+    \\-l, --long                List files in the long format.
+    \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).
+    \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc)
+    \\-r, --recursive           Recursively list subdirectories encountered.
     \\<str>...
     \\
     ;
@@ -27,12 +27,18 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer arena_impl.deinit();
     const allocator = arena_impl.allocator();
 
+    // parsers
+    const parsers = comptime .{
+        .str = clap.parsers.string,
+        .SORTTYPE = clap.parsers.enumeration(fs.SortType),
+    };
+
     // parse command line arguments
     const params = comptime clap.parseParamsComptime(params_desc);
     var res = try clap.parse(
         clap.Help,
         &params,
-        clap.parsers.default,
+        parsers,
         init.args,
         .{
             .allocator = allocator,
@@ -42,7 +48,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var show_hidden: bool = false;
     var show_detail: bool = false;
     var recursive: bool = false;
-    var sort_type: u8 = 0;
+    var sort_type: fs.SortType = .name;
     var path: []const u8 = ".";
 
     // process parsed args
