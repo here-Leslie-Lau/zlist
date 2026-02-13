@@ -31,6 +31,27 @@ pub const Files = struct {
     items: std.ArrayList(file.File),
     opt: Options,
 
+    icon_inventory: std.StaticStringMap([]const u8) = std.StaticStringMap([]const u8).initComptime(.{
+        .{ ".zig", " " },
+        .{ ".go", " " },
+        .{ ".rs", " " },
+        .{ ".c", " " },
+        .{ ".cpp", " " },
+        .{ ".h", " " },
+        .{ ".js", " " },
+        .{ ".ts", " " },
+        .{ ".py", " " },
+        .{ ".java", " " },
+        .{ ".md", " " },
+        .{ ".txt", " " },
+        .{ ".png", " " },
+        .{ ".jpg", " " },
+        .{ ".jpeg", " " },
+        .{ ".gif", " " },
+        // default file icon
+        .{ "", " " },
+    }),
+
     /// init a Files from a directory
     pub fn init(
         allocator: mem.Allocator,
@@ -148,40 +169,18 @@ pub const Files = struct {
         return max_len;
     }
 
-    inline fn getIcon(_: Self, is_dir: bool, name: []const u8) []const u8 {
+    inline fn getIcon(self: Self, is_dir: bool, name: []const u8) []const u8 {
         if (is_dir) {
             return " ";
         }
 
         const ext = std.fs.path.extension(name);
-        if (std.mem.eql(u8, ext, ".zig")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".go")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".rs")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".c")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".cpp")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".h")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".js")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".ts")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".py")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".java")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".md")) {
-            return " ";
-        } else if (std.mem.eql(u8, ext, ".txt")) {
-            return " ";
-        } else {
-            // default file icon
-            return " ";
+        if (self.icon_inventory.get(ext)) |icon| {
+            return icon;
         }
+
+        // return default icons based on extension
+        return " ";
     }
 
     /// list files in detail mode
