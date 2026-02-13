@@ -26,7 +26,6 @@ While it's a learning project, it still comes with some nice touches:
 
 ![Preview1](pics/screenshot.jpg)
 ![Preview2](pics/screenshot2.jpg)
-![Preview3](pics/screenshot3.jpg)
 
 *(Make sure you have a [Nerd Font](https://www.nerdfonts.com/) installed in your terminal to see the icons!)*
 
@@ -51,7 +50,7 @@ cd zlist
 zig build -Doptimize=ReleaseFast
 
 # 3. Run it. (Optional: add to PATH, it's up to you.)
-./zig-out/bin/ls
+./zig-out/bin/zl
 ```
 
 ## 🛠 Usage
@@ -59,7 +58,7 @@ zig build -Doptimize=ReleaseFast
 Simple and intuitive.
 
 ```bash
-ls [OPTIONS] [PATH]
+zl [OPTIONS] [PATH]
 ```
 
 | Flag | Description |
@@ -74,22 +73,22 @@ ls [OPTIONS] [PATH]
 
 **Standard list:**
 ```bash
-ls
+zl
 ```
 
 **Show everything with details:**
 ```bash
-ls -la
+zl -la
 ```
 
 **Find short filenames easily (Sort by length):**
 ```bash
-ls -s 1
+zl -s length
 ```
 
 **Dig deep (Recursive listing):**
 ```bash
-ls -r
+zl -r
 ```
 
 ## 🛣 Roadmap

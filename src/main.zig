@@ -8,7 +8,7 @@ const io = threaded.io();
 
 const params_desc: []const u8 = blk: {
     break :blk 
-    \\-h, --help                Usage: ls [OPTIONS: -l -a -s=length ...] [Directory]
+    \\-h, --help                Usage: zl [OPTIONS: -l -a -s=length ...] [Directory]
     \\-l, --long                List files in the long format.
     \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).
     \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc)
@@ -102,10 +102,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
     }
 
     if (show_detail) {
-        // ls -l
+        // zl -l
         try files.listDetail();
     } else if (recursive) {
-        // ls -r
+        // zl -r
         // stdout
         var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();

@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
     {
         // setup exe
         const exe = b.addExecutable(.{
-            .name = "ls",
+            .name = "zl",
             .root_module = mod,
         });
 

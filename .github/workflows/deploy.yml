@@ -37,8 +37,8 @@ jobs:
       - name: Rename and Package
         run: |
           cd zig-out/bin
-          mv ls ls-${{ matrix.target }}
-          tar -czvf ls-${{ matrix.target }}.tar.gz ls-${{ matrix.target }}
+          mv zl zl-${{ matrix.target }}
+          tar -czvf zl-${{ matrix.target }}.tar.gz zl-${{ matrix.target }}
 
       - name: Upload
         uses: softprops/action-gh-release@v2
