@@ -23,6 +23,8 @@ pub const Files = struct {
         show_hidden: bool = false,
         /// show recursive
         recursive: bool = false,
+        /// pure mode, only show file names without icons and colors
+        pure: bool = false,
         /// sort type
         sort_type: SortType = .name,
     };
@@ -127,7 +129,7 @@ pub const Files = struct {
             // set color
             try term.setColor(val.getColor());
             // print item
-            try term.writer.print(PrintMode.Normal.toString(), .{
+            try term.writer.print(comptime PrintMode.Normal.toString(), .{
                 icon,
                 val.name,
                 max_display_len - icon.len + 1,
@@ -202,7 +204,7 @@ pub const Files = struct {
         for (self.items.items) |val| {
             // first, set color
             try term.setColor(val.getColor());
-            try term.writer.print(PrintMode.Detail.toString(), .{
+            try term.writer.print(comptime PrintMode.Detail.toString(), .{
                 val.getPermissions(&perm_buf),
                 val.username,
                 val.groupname,
@@ -240,7 +242,7 @@ pub const Files = struct {
 
             // set color for prefix and connector
             try term.setColor(Terminal.Color.bright_blue);
-            try term.writer.print(PrintMode.RecursivePrefix.toString(), .{
+            try term.writer.print(comptime PrintMode.RecursivePrefix.toString(), .{
                 prefix,
                 connector,
             });
@@ -249,7 +251,7 @@ pub const Files = struct {
 
             // print file/directory name
             try term.setColor(val.getColor());
-            try term.writer.print(PrintMode.RecursiveWithFileMeta.toString(), .{
+            try term.writer.print(comptime PrintMode.RecursiveWithFileMeta.toString(), .{
                 self.getIcon(val.is_dir, val.name),
                 val.name,
             });

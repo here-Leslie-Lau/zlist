@@ -13,6 +13,7 @@ const params_desc: []const u8 = blk: {
     \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).
     \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc)
     \\-r, --recursive           Recursively list subdirectories encountered.
+    \\-p, --pure                Only show file names, without colors or other formatting.
     \\<str>...
     \\
     ;
@@ -48,6 +49,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var show_hidden: bool = false;
     var show_detail: bool = false;
     var recursive: bool = false;
+    var pure: bool = false;
     var sort_type: fs.SortType = .name;
     var path: []const u8 = ".";
 
@@ -69,6 +71,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
     if (res.args.sort) |sort| {
         sort_type = sort;
     }
+    // set pure mode
+    if (res.args.pure != 0) {
+        pure = true;
+    }
     if (res.args.recursive != 0) {
         // set recursive mode
         recursive = true;
@@ -85,7 +91,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const dir = try cwd.openDir(io, path, .{ .iterate = true });
     defer dir.close(io);
 
-    var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive });
+    var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure });
     defer files.deinit();
 
     if (files.items.items.len == 0) {
