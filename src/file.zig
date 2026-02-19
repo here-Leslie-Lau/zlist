@@ -3,6 +3,8 @@ const mem = std.mem;
 const Terminal = std.Io.Terminal;
 const builtin = @import("builtin");
 
+const opts = @import("opts.zig");
+
 pub const File = struct {
     const Self = @This();
     is_dir: bool,
@@ -14,20 +16,13 @@ pub const File = struct {
     username: []const u8,
     groupname: []const u8,
 
-    pub const Options = struct {
-        /// show detail mode
-        show_detail: bool = false,
-        /// show hidden files
-        show_hidden: bool = false,
-    };
-
     /// Initialize a File from a directory entry.
     /// Return null if the file should be skipped (e.g., hidden files when not showing hidden).
     pub inline fn init(
         io: std.Io,
         entry: *const std.Io.Dir.Entry,
         dir: *const std.Io.Dir,
-        opt: Options,
+        opt: opts.FileOptions,
     ) !?Self {
         const is_dir: bool = (entry.kind == .directory);
         const is_hidden: bool = (entry.name[0] == '.');

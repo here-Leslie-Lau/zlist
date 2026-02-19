@@ -2,6 +2,7 @@ const std = @import("std");
 
 const clap = @import("clap");
 const fs = @import("files.zig");
+const opts = @import("opts.zig");
 
 var threaded: std.Io.Threaded = .init_single_threaded;
 const io = threaded.io();
@@ -31,7 +32,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // parsers
     const parsers = comptime .{
         .str = clap.parsers.string,
-        .SORTTYPE = clap.parsers.enumeration(fs.SortType),
+        .SORTTYPE = clap.parsers.enumeration(opts.SortType),
     };
 
     // parse command line arguments
@@ -50,7 +51,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var show_detail: bool = false;
     var recursive: bool = false;
     var pure: bool = false;
-    var sort_type: fs.SortType = .name;
+    var sort_type: opts.SortType = .name;
     var path: []const u8 = ".";
 
     // process parsed args
