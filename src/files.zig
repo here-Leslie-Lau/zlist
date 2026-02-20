@@ -106,16 +106,21 @@ pub const Files = struct {
         for (self.items.items, 0..) |val, i| {
             const icon = self.getIcon(val.is_dir, val.name);
 
-            // set color
-            try term.setColor(val.getColor());
+            if (!self.opt.pure) {
+                // set color
+                try term.setColor(val.getColor());
+            }
             // print item
             try term.writer.print(comptime opts.PrintMode.Normal.toString(), .{
                 icon,
                 val.name,
                 max_display_len - icon.len + 1,
             });
-            // reset color
-            try term.setColor(Terminal.Color.reset);
+
+            if (!self.opt.pure) {
+                // reset color
+                try term.setColor(Terminal.Color.reset);
+            }
 
             // make sure to print newline after each row
             if ((i + 1) % cols == 0) {
@@ -182,8 +187,10 @@ pub const Files = struct {
         var time_buf: [32]u8 = undefined;
 
         for (self.items.items) |val| {
-            // first, set color
-            try term.setColor(val.getColor());
+            if (!self.opt.pure) {
+                // first, set color
+                try term.setColor(val.getColor());
+            }
             try term.writer.print(comptime opts.PrintMode.Detail.toString(), .{
                 val.getPermissions(&perm_buf),
                 val.username,
@@ -194,8 +201,10 @@ pub const Files = struct {
                 val.name,
             });
 
-            // reset color
-            try term.setColor(Terminal.Color.reset);
+            if (!self.opt.pure) {
+                // reset color
+                try term.setColor(Terminal.Color.reset);
+            }
             try term.writer.print("\n", .{});
         }
 
@@ -220,22 +229,31 @@ pub const Files = struct {
             const is_last = (i == total - 1);
             const connector = if (is_last) "└──" else "├──";
 
-            // set color for prefix and connector
-            try term.setColor(Terminal.Color.bright_blue);
+            // print prefix and connector
+            if (!self.opt.pure) {
+                // set color for prefix and connector
+                try term.setColor(Terminal.Color.bright_blue);
+            }
             try term.writer.print(comptime opts.PrintMode.RecursivePrefix.toString(), .{
                 prefix,
                 connector,
             });
-            // reset color
-            try term.setColor(Terminal.Color.reset);
+            if (!self.opt.pure) {
+                // reset color
+                try term.setColor(Terminal.Color.reset);
+            }
 
             // print file/directory name
-            try term.setColor(val.getColor());
+            if (!self.opt.pure) {
+                try term.setColor(val.getColor());
+            }
             try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMeta.toString(), .{
                 self.getIcon(val.is_dir, val.name),
                 val.name,
             });
-            try term.setColor(Terminal.Color.reset);
+            if (!self.opt.pure) {
+                try term.setColor(Terminal.Color.reset);
+            }
 
             if (val.is_dir) {
                 const sub_dir = try dir.openDir(self.io, val.name, .{ .iterate = true });

@@ -14,6 +14,8 @@ pub const PrintMode = enum {
     RecursivePrefix,
     /// The command is `zl -r`. just file meta, without prefix and connectors.
     RecursiveWithFileMeta,
+    /// The command is `zl -r -p`.
+    RecursiveWithFileMetaPure,
 
     pub inline fn toString(self: PrintMode) []const u8 {
         return switch (self) {
@@ -29,6 +31,8 @@ pub const PrintMode = enum {
             .RecursivePrefix => "{s}{s}",
             // icon and name
             .RecursiveWithFileMeta => " {s} {s}\n",
+            // name only
+            .RecursiveWithFileMetaPure => "{s}\n",
         };
     }
 };
