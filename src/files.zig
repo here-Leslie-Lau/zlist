@@ -109,13 +109,16 @@ pub const Files = struct {
             if (!self.opt.pure) {
                 // set color
                 try term.setColor(val.getColor());
+                // print item
+                try term.writer.print(comptime opts.PrintMode.Normal.toString(), .{
+                    icon,
+                    val.name,
+                    max_display_len - icon.len + 1, // +1 for padding
+                });
+            } else {
+                // pure mode
+                try term.writer.print(comptime opts.PrintMode.NormalPure.toString(), .{ val.name, max_display_len + 1 });
             }
-            // print item
-            try term.writer.print(comptime opts.PrintMode.Normal.toString(), .{
-                icon,
-                val.name,
-                max_display_len - icon.len + 1,
-            });
 
             if (!self.opt.pure) {
                 // reset color
@@ -190,16 +193,27 @@ pub const Files = struct {
             if (!self.opt.pure) {
                 // first, set color
                 try term.setColor(val.getColor());
+
+                try term.writer.print(comptime opts.PrintMode.Detail.toString(), .{
+                    val.getPermissions(&perm_buf),
+                    val.username,
+                    val.groupname,
+                    try val.humanSize(&size_buf),
+                    try val.formatTime(&time_buf),
+                    self.getIcon(val.is_dir, val.name),
+                    val.name,
+                });
+            } else {
+                // pure mode, no color and no icon
+                try term.writer.print(comptime opts.PrintMode.DetailPure.toString(), .{
+                    val.getPermissions(&perm_buf),
+                    val.username,
+                    val.groupname,
+                    try val.humanSize(&size_buf),
+                    try val.formatTime(&time_buf),
+                    val.name,
+                });
             }
-            try term.writer.print(comptime opts.PrintMode.Detail.toString(), .{
-                val.getPermissions(&perm_buf),
-                val.username,
-                val.groupname,
-                try val.humanSize(&size_buf),
-                try val.formatTime(&time_buf),
-                self.getIcon(val.is_dir, val.name),
-                val.name,
-            });
 
             if (!self.opt.pure) {
                 // reset color
@@ -246,11 +260,15 @@ pub const Files = struct {
             // print file/directory name
             if (!self.opt.pure) {
                 try term.setColor(val.getColor());
+
+                try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMeta.toString(), .{
+                    self.getIcon(val.is_dir, val.name),
+                    val.name,
+                });
+            } else {
+                // pure mode, no color and no icon
+                try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMetaPure.toString(), .{val.name});
             }
-            try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMeta.toString(), .{
-                self.getIcon(val.is_dir, val.name),
-                val.name,
-            });
             if (!self.opt.pure) {
                 try term.setColor(Terminal.Color.reset);
             }

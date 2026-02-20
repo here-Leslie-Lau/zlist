@@ -22,17 +22,17 @@ pub const PrintMode = enum {
             // icon, name and max width of the name.
             .Normal => "  {s} {s:<[2]}",
             // name and max width of the name.
-            .NormalPure => "  {s:<[2]}",
+            .NormalPure => "  {s:<[1]}",
             // permissions, username, group name, size, mtime, icon and name.
             .Detail => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}",
             // permissions, username, group name, size, mtime and name.
-            .DetailPure => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s:<[2]}",
+            .DetailPure => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s}",
             // prefix, connectors
             .RecursivePrefix => "{s}{s}",
             // icon and name
             .RecursiveWithFileMeta => " {s} {s}\n",
             // name only
-            .RecursiveWithFileMetaPure => "{s}\n",
+            .RecursiveWithFileMetaPure => " {s}\n",
         };
     }
 };
