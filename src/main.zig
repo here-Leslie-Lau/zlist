@@ -110,7 +110,11 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     if (show_detail) {
         // zl -l
-        try files.listDetail();
+        switch (pure) {
+            // pure mode
+            true => try files.listDetail(true),
+            false => try files.listDetail(false),
+        }
     } else if (recursive) {
         // zl -r
         // stdout
@@ -120,11 +124,20 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // get term
         const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
-        try files.listRecursive(term, "", true, dir);
+        switch (pure) {
+            // pure mode
+            true => try files.listRecursive(term, "", true, dir, true),
+            false => try files.listRecursive(term, "", true, dir, false),
+        }
+
         try stdout_writer.interface.flush();
     } else {
         // just ls command
-        try files.list();
+        switch (pure) {
+            // pure mode
+            true => try files.list(true),
+            false => try files.list(false),
+        }
     }
 }
 

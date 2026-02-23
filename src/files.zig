@@ -85,7 +85,7 @@ pub const Files = struct {
     }
 
     /// list files in simple mode
-    pub fn list(self: Self) !void {
+    pub fn list(self: Self, comptime pure: bool) !void {
         // stdout
         var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
@@ -106,7 +106,7 @@ pub const Files = struct {
         for (self.items.items, 0..) |val, i| {
             const icon = self.getIcon(val.is_dir, val.name);
 
-            if (!self.opt.pure) {
+            if (!pure) {
                 // set color
                 try term.setColor(val.getColor());
                 // print item
@@ -120,7 +120,7 @@ pub const Files = struct {
                 try term.writer.print(comptime opts.PrintMode.NormalPure.toString(), .{ val.name, max_display_len + 1 });
             }
 
-            if (!self.opt.pure) {
+            if (!pure) {
                 // reset color
                 try term.setColor(Terminal.Color.reset);
             }
@@ -175,7 +175,7 @@ pub const Files = struct {
     }
 
     /// list files in detail mode
-    pub fn listDetail(self: Self) !void {
+    pub fn listDetail(self: Self, comptime pure: bool) !void {
         // stdout
         var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
@@ -190,7 +190,7 @@ pub const Files = struct {
         var time_buf: [32]u8 = undefined;
 
         for (self.items.items) |val| {
-            if (!self.opt.pure) {
+            if (!pure) {
                 // first, set color
                 try term.setColor(val.getColor());
 
@@ -215,7 +215,7 @@ pub const Files = struct {
                 });
             }
 
-            if (!self.opt.pure) {
+            if (!pure) {
                 // reset color
                 try term.setColor(Terminal.Color.reset);
             }
@@ -232,6 +232,7 @@ pub const Files = struct {
         prefix: []const u8,
         first: bool,
         dir: std.Io.Dir,
+        comptime pure: bool,
     ) !void {
         if (first) {
             try term.writer.print(".\n", .{});
@@ -244,7 +245,7 @@ pub const Files = struct {
             const connector = if (is_last) "└──" else "├──";
 
             // print prefix and connector
-            if (!self.opt.pure) {
+            if (!pure) {
                 // set color for prefix and connector
                 try term.setColor(Terminal.Color.bright_blue);
             }
@@ -252,13 +253,13 @@ pub const Files = struct {
                 prefix,
                 connector,
             });
-            if (!self.opt.pure) {
+            if (!pure) {
                 // reset color
                 try term.setColor(Terminal.Color.reset);
             }
 
             // print file/directory name
-            if (!self.opt.pure) {
+            if (!pure) {
                 try term.setColor(val.getColor());
 
                 try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMeta.toString(), .{
@@ -269,7 +270,7 @@ pub const Files = struct {
                 // pure mode, no color and no icon
                 try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMetaPure.toString(), .{val.name});
             }
-            if (!self.opt.pure) {
+            if (!pure) {
                 try term.setColor(Terminal.Color.reset);
             }
 
@@ -289,7 +290,7 @@ pub const Files = struct {
                 const child_connector = if (is_last) "    " else "│   ";
                 const new_prefix = try std.fmt.allocPrint(self.allocator, "{s}{s}", .{ prefix, child_connector });
 
-                try sub_files.listRecursive(term, new_prefix, false, sub_dir);
+                try sub_files.listRecursive(term, new_prefix, false, sub_dir, pure);
 
                 self.allocator.free(new_prefix);
             }
@@ -326,7 +327,7 @@ test "get_detail" {
     );
     defer files.deinit();
 
-    try files.listDetail();
+    try files.listDetail(false);
 }
 
 test "recursive" {
@@ -359,6 +360,6 @@ test "recursive" {
 
     const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
-    try files.listRecursive(term, "", true, tmp_dir.dir);
+    try files.listRecursive(term, "", true, tmp_dir.dir, false);
     try stdout_writer.interface.flush();
 }
