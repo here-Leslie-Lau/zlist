@@ -67,6 +67,7 @@ zl [OPTIONS] [PATH]
 | `-a`, `--a` | Show hidden files (starting with `.`). |
 | `-s`, `--sort <mode>` | **0**: Name (A-Z) [Default]<br>**1**: Name Length (Shortest first) |
 | `-r`, `--recursive` | Recursively list subdirectories encountered. |
+| `-p`, `--pure` | Clean output without colors or icons (useful for pipes). |
 | `-h`, `--help` | Print help message. |
 
 ### Examples
@@ -89,6 +90,11 @@ zl -s length
 **Dig deep (Recursive listing):**
 ```bash
 zl -r
+```
+
+**Clean output (No colors/icons):**
+```bash
+zl -p
 ```
 
 ## 🛣 Roadmap
