@@ -35,6 +35,15 @@ pub const Files = struct {
         .{ "", " " },
     }),
 
+    color_inventory: std.StaticStringMap(Terminal.Color) = std.StaticStringMap(Terminal.Color).initComptime(.{
+        .{ ".md", Terminal.Color.bright_magenta },
+        .{ ".png", Terminal.Color.bright_cyan },
+        .{ ".jpg", Terminal.Color.bright_cyan },
+        .{ ".jpeg", Terminal.Color.bright_cyan },
+        .{ ".gif", Terminal.Color.bright_cyan },
+        .{ "", Terminal.Color.bright_yellow },
+    }),
+
     /// init a Files from a directory
     pub fn init(
         allocator: mem.Allocator,
@@ -108,7 +117,7 @@ pub const Files = struct {
 
             if (!pure) {
                 // set color
-                try term.setColor(val.getColor());
+                try term.setColor(self.getColor(val.is_dir, val.name));
                 // print item
                 try term.writer.print(comptime opts.PrintMode.Normal.toString(), .{
                     icon,
@@ -174,6 +183,20 @@ pub const Files = struct {
         return " ";
     }
 
+    inline fn getColor(self: Self, is_dir: bool, name: []const u8) Terminal.Color {
+        if (is_dir) {
+            return Terminal.Color.bright_blue;
+        }
+
+        const ext = std.fs.path.extension(name);
+        if (self.color_inventory.get(ext)) |color| {
+            return color;
+        }
+
+        // default file color
+        return Terminal.Color.bright_yellow;
+    }
+
     /// list files in detail mode
     pub fn listDetail(self: Self, comptime pure: bool) !void {
         // stdout
@@ -192,7 +215,7 @@ pub const Files = struct {
         for (self.items.items) |val| {
             if (!pure) {
                 // first, set color
-                try term.setColor(val.getColor());
+                try term.setColor(self.getColor(val.is_dir, val.name));
 
                 try term.writer.print(comptime opts.PrintMode.Detail.toString(), .{
                     val.getPermissions(&perm_buf),
@@ -260,7 +283,7 @@ pub const Files = struct {
 
             // print file/directory name
             if (!pure) {
-                try term.setColor(val.getColor());
+                try term.setColor(self.getColor(val.is_dir, val.name));
 
                 try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMeta.toString(), .{
                     self.getIcon(val.is_dir, val.name),

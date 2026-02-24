@@ -69,19 +69,6 @@ pub const File = struct {
         return lhs.name.len < rhs.name.len;
     }
 
-    pub inline fn getColor(self: Self) Terminal.Color {
-        // TODO: add more colors based on file type
-        if (self.is_dir) {
-            // blue (directory)
-            return Terminal.Color.bright_blue;
-        } else if (std.mem.eql(u8, ".md", std.fs.path.extension(self.name))) {
-            return Terminal.Color.bright_magenta;
-        } else {
-            // default file color
-            return Terminal.Color.bright_yellow;
-        }
-    }
-
     pub inline fn getPermissions(self: Self, buf: *[10]u8) []const u8 {
         if (self.stat == null) {
             // unknown permissions
