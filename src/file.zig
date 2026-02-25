@@ -99,6 +99,8 @@ pub const File = struct {
                 };
             },
         }
+
+        return null;
     }
 
     pub inline fn getPermissions(self: Self, buf: *[10]u8) []const u8 {
