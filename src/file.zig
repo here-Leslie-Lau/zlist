@@ -67,6 +67,8 @@ pub const File = struct {
 
     pub inline fn getStat(self: Self, dir: *const std.Io.Dir, io: std.Io) ?Stat {
         const stat = dir.statFile(io, self.name, .{}) catch return null;
+        const f = dir.openFile(io, self.name, .{}) catch return null;
+        defer f.close(io);
 
         switch (builtin.os.tag) {
             .windows => {
@@ -74,13 +76,39 @@ pub const File = struct {
                 return null;
             },
             .linux => {
-                // TODO leslie: use std.os.linux.statx()
+                const linux = std.os.linux;
+
+                var statx: linux.Statx = undefined;
+                const errno = linux.errno(linux.statx(f.handle, "", linux.AT.EMPTY_PATH, .{ .GID = true, .UID = true }, &statx));
+
+                switch (errno) {
+                    .SUCCESS => {},
+                    .ACCES => {},
+                    .BADF => {},
+                    .FAULT => {},
+                    .INVAL => {},
+                    .LOOP => {},
+                    .NAMETOOLONG => {},
+                    .NOENT => {},
+                    .NOMEM => {},
+                    .NOTDIR => {},
+                    // no other errors are possible
+                    else => unreachable,
+                }
+
+                return .{
+                    .size = stat.size,
+                    .kind = stat.kind,
+                    .permissions = stat.permissions,
+                    .mtime = stat.mtime,
+
+                    // TODO leslie: cache these values in File struct to avoid extra syscalls
+                    .uid = statx.uid,
+                    .gid = statx.gid,
+                };
             },
             else => {
                 // posix-like
-                const f = dir.openFile(io, self.name, .{}) catch return null;
-                defer f.close(io);
-
                 var buf: std.c.Stat = undefined;
                 const result = std.c.fstat(f.handle, &buf);
                 if (result != 0) {
