@@ -15,7 +15,7 @@ pub const File = struct {
     is_hidden: bool,
     name: []const u8,
 
-    stat: ?std.Io.Dir.Stat,
+    stat_t: ?Stat,
     username: []const u8,
     groupname: []const u8,
 
@@ -39,15 +39,14 @@ pub const File = struct {
             .is_dir = is_dir,
             .is_exec = false,
             .name = entry.name,
-            .stat = null,
+            .stat_t = null,
             .username = "",
             .groupname = "",
         };
 
         if (opt.show_detail) {
             // read more file details
-            const stat = try dir.statFile(io, file.name, .{});
-            file.stat = stat;
+            file.stat_t = file.getStat(dir, io);
 
             if (builtin.os.tag != .windows) {
                 file.username = file.getName(.User) orelse "UNKNOWN";
@@ -66,14 +65,50 @@ pub const File = struct {
         return lhs.name.len < rhs.name.len;
     }
 
+    pub inline fn getStat(self: Self, dir: *const std.Io.Dir, io: std.Io) ?Stat {
+        const stat = dir.statFile(io, self.name, .{}) catch return null;
+
+        switch (builtin.os.tag) {
+            .windows => {
+                // does not support
+                return null;
+            },
+            .linux => {
+                // TODO leslie: use std.os.linux.statx()
+            },
+            else => {
+                // posix-like
+                const f = dir.openFile(io, self.name, .{}) catch return null;
+                defer f.close(io);
+
+                var buf: std.c.Stat = undefined;
+                const result = std.c.fstat(f.handle, &buf);
+                if (result != 0) {
+                    return null;
+                }
+
+                return .{
+                    .size = stat.size,
+                    .kind = stat.kind,
+                    .permissions = stat.permissions,
+                    .mtime = stat.mtime,
+
+                    // TODO leslie: cache these values in File struct to avoid extra syscalls
+                    .uid = buf.uid,
+                    .gid = buf.gid,
+                };
+            },
+        }
+    }
+
     pub inline fn getPermissions(self: Self, buf: *[10]u8) []const u8 {
-        if (self.stat == null) {
+        if (self.stat_t == null) {
             // unknown permissions
             @memset(buf, '-');
             return buf[0..10];
         }
 
-        buf[0] = switch (self.stat.?.kind) {
+        buf[0] = switch (self.stat_t.?.kind) {
             .directory => 'd',
             .sym_link => 'l',
             .unix_domain_socket => 's',
@@ -85,7 +120,7 @@ pub const File = struct {
             // TODO leslie: todo
         } else {
             // posix permissions
-            const m = @intFromEnum(self.stat.?.permissions);
+            const m = @intFromEnum(self.stat_t.?.permissions);
             // Permission bits from posix standard
             const S_IRUSR = 0o400;
             const S_IWUSR = 0o200;
@@ -118,11 +153,14 @@ pub const File = struct {
     };
 
     /// get user name (enum User or Group)
-    pub inline fn getName(_: Self, name: NameByID) ?[]const u8 {
+    pub inline fn getName(self: Self, name: NameByID) ?[]const u8 {
+        if (self.stat_t == null) {
+            return null;
+        }
+
         switch (name) {
             .User => {
-                const uid = std.c.getuid();
-                const passwd = std.c.getpwuid(uid);
+                const passwd = std.c.getpwuid(self.stat_t.?.uid);
                 if (passwd == null) {
                     return null;
                 }
@@ -130,8 +168,7 @@ pub const File = struct {
                 return std.mem.span(passwd.?.*.name);
             },
             .Group => {
-                const gid = std.c.getgid();
-                const group = std.c.getgrgid(gid);
+                const group = std.c.getgrgid(self.stat_t.?.gid);
                 if (group == null) {
                     return null;
                 }
@@ -143,7 +180,11 @@ pub const File = struct {
 
     /// convert size in bytes to human-readable format
     pub inline fn humanSize(self: Self, buf: []u8) ![]u8 {
-        var sz: f64 = @floatFromInt(self.stat.?.size);
+        if (self.stat_t == null) {
+            return std.fmt.bufPrint(buf, "?B", .{});
+        }
+
+        var sz: f64 = @floatFromInt(self.stat_t.?.size);
         var i: usize = 0;
         while (sz >= 1024.0 and i < size_units.len - 1) : (i += 1) {
             sz /= 1024.0;
@@ -154,7 +195,7 @@ pub const File = struct {
 
     /// format modification time to string
     pub inline fn formatTime(self: Self, buf: []u8) ![]u8 {
-        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(self.stat.?.mtime.toSeconds()) };
+        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(self.stat_t.?.mtime.toSeconds()) };
         const epoch_day = epoch_seconds.getEpochDay();
         const year_day = epoch_day.calculateYearDay();
         const month_day = year_day.calculateMonthDay();
@@ -177,4 +218,16 @@ pub const File = struct {
             year,
         });
     }
+};
+
+/// Wrapper around std.Io.Dir.Stat to store only necessary fields for display.
+/// Cross-platform.
+const Stat = struct {
+    size: u64,
+    kind: std.Io.File.Kind,
+    permissions: std.Io.File.Permissions,
+    mtime: std.Io.Timestamp,
+
+    uid: std.c.uid_t,
+    gid: std.c.gid_t,
 };
