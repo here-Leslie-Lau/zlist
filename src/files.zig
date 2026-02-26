@@ -56,7 +56,12 @@ pub const Files = struct {
 
         var it = dir.iterate();
         while (try it.next(io)) |entry| {
-            var fs = (try file.File.init(io, &entry, &dir, .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden })) orelse continue;
+            var fs = (try file.File.init(
+                io,
+                &entry,
+                &dir,
+                .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file },
+            )) orelse continue;
 
             // copy name
             var name: []const u8 = undefined;

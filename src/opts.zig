@@ -55,6 +55,10 @@ pub const FilesOptions = struct {
     pure: bool = false,
     /// sort type
     sort_type: SortType = .name,
+    /// only show directories, not files
+    only_dir: bool = false,
+    /// only show files, not directories
+    only_file: bool = false,
 };
 
 pub const FileOptions = struct {
@@ -62,4 +66,8 @@ pub const FileOptions = struct {
     show_detail: bool = false,
     /// show hidden files
     show_hidden: bool = false,
+    /// only show directories, not files
+    only_dir: bool = false,
+    /// only show files, not directories
+    only_file: bool = false,
 };

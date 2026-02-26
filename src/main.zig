@@ -15,6 +15,8 @@ const params_desc: []const u8 = blk: {
     \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc)
     \\-r, --recursive           Recursively list subdirectories encountered.
     \\-p, --pure                Only show file names, without colors or other formatting.
+    \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
+    \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
     \\<str>...
     \\
     ;
@@ -52,6 +54,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var recursive: bool = false;
     var pure: bool = false;
     var sort_type: opts.SortType = .name;
+    var only_dir: bool = false;
+    var only_file: bool = false;
+
     var path: []const u8 = ".";
 
     // process parsed args
@@ -82,6 +87,18 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // no necessity to show detail in recursive mode
         show_detail = false;
     }
+    // only show directories or files
+    if (res.args.dir != 0) {
+        only_dir = true;
+    }
+    if (res.args.no_dir != 0) {
+        only_file = true;
+    }
+    if (only_dir and only_file) {
+        // if both -d and -D are set, neither is effective
+        only_dir = false;
+        only_file = false;
+    }
 
     // get file path from args
     if (res.positionals[0].len > 0) {
@@ -92,7 +109,12 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const dir = try cwd.openDir(io, path, .{ .iterate = true });
     defer dir.close(io);
 
-    var files = try fs.Files.init(allocator, io, dir, .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure });
+    var files = try fs.Files.init(
+        allocator,
+        io,
+        dir,
+        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file },
+    );
     defer files.deinit();
 
     if (files.items.items.len == 0) {
@@ -102,7 +124,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
-        try stdout_writer.interface.print("\n\x1b[93m No files to show.\x1b[0m\n", .{});
+        try stdout_writer.interface.print(comptime "\n\x1b[93m No files to show.\x1b[0m\n", .{});
         try stdout_writer.interface.flush();
 
         return;

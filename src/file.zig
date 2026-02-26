@@ -33,6 +33,12 @@ pub const File = struct {
         if (!opt.show_hidden and is_hidden) {
             return null;
         }
+        if (opt.only_dir and !is_dir) {
+            return null;
+        }
+        if (opt.only_file and is_dir) {
+            return null;
+        }
 
         var file: Self = .{
             .is_hidden = is_hidden,
