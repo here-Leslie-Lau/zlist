@@ -65,9 +65,11 @@ zl [OPTIONS] [PATH]
 | :--- | :--- |
 | `-l`, `--long` | Enable detailed view (permissions, size, date, user). |
 | `-a`, `--a` | Show hidden files (starting with `.`). |
-| `-s`, `--sort <mode>` | **0**: Name (A-Z) [Default]<br>**1**: Name Length (Shortest first) |
+| `-s`, `--sort <mode>` | `name` (A-Z) [Default]<br>`length` (Shortest first) |
 | `-r`, `--recursive` | Recursively list subdirectories encountered. |
 | `-p`, `--pure` | Clean output without colors or icons (useful for pipes). |
+| `-d`, `--dir` | Only show directories. |
+| `-D`, `--no_dir` | Only show files (exclude directories). |
 | `-h`, `--help` | Print help message. |
 
 ### Examples
@@ -97,6 +99,12 @@ zl -r
 zl -p
 ```
 
+**Filter by file type (Directories only / Files only):**
+```bash
+zl -d
+zl -D
+```
+
 ## 🛣 Roadmap
 
 *   [x] Basic file listing & recursion
@@ -104,6 +112,11 @@ zl -p
 *   [x] Detailed file stats
 *   [x] Sorting by name length
 *   [x] Recursive directory traversal (`-r`)
+*   [x] Clean output mode (`-p`)
+*   [x] Filter by files or directories (`-d`, `-D`)
+*   [ ] Hierarchical support in recursive mode (like `zl -r 3` command)
+*   [ ] Multi-threading for faster `stat` calls
+*   [ ] Custom color/icon configurations (Maybe. If need)
 
 ## 🤝 Contributing
 
