@@ -13,7 +13,8 @@ const params_desc: []const u8 = blk: {
     \\-l, --long                List files in the long format.
     \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).
     \\-s, --sort <SORTTYPE>     Sort results. Default: length(name length asc). OPTIONS: name(asc), length(name length asc)
-    \\-r, --recursive           Recursively list subdirectories encountered.
+    \\-r, --recursive           Recursively list subdirectories encountered. Equivalent to -L 0.
+    \\-L, --level <INT>         Limit the depth of recursion. 0 means infinite.
     \\-p, --pure                Only show file names, without colors or other formatting.
     \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
     \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
@@ -35,6 +36,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const parsers = comptime .{
         .str = clap.parsers.string,
         .SORTTYPE = clap.parsers.enumeration(opts.SortType),
+        .INT = clap.parsers.int(i8, 10),
     };
 
     // parse command line arguments
@@ -51,11 +53,12 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     var show_hidden: bool = false;
     var show_detail: bool = false;
-    var recursive: bool = false;
     var pure: bool = false;
     var sort_type: opts.SortType = .length;
     var only_dir: bool = false;
     var only_file: bool = false;
+    var recursive: bool = false;
+    var recursion_level: i8 = 0; // 0 means infinite
 
     var path: []const u8 = ".";
 
@@ -81,12 +84,6 @@ pub fn main(init: std.process.Init.Minimal) !void {
     if (res.args.pure != 0) {
         pure = true;
     }
-    if (res.args.recursive != 0) {
-        // set recursive mode
-        recursive = true;
-        // no necessity to show detail in recursive mode
-        show_detail = false;
-    }
     // only show directories or files
     if (res.args.dir != 0) {
         only_dir = true;
@@ -98,6 +95,17 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // if both -d and -D are set, neither is effective
         only_dir = false;
         only_file = false;
+    }
+    if (res.args.recursive != 0) {
+        // set recursive mode
+        recursive = true;
+        // no necessity to show detail in recursive mode
+        show_detail = false;
+    }
+    if (res.args.level) |level| {
+        // set recursive mode and recursion level
+        recursive = true;
+        recursion_level = level;
     }
 
     // get file path from args
