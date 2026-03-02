@@ -10,6 +10,7 @@ pub const Files = struct {
     const Self = @This();
 
     max_display_len: usize = 0,
+    curr_recursion_level: i8 = 1,
     allocator: mem.Allocator,
     io: std.Io,
     items: std.ArrayList(file.File),
@@ -263,6 +264,14 @@ pub const Files = struct {
             try term.writer.print(".\n", .{});
         }
 
+        // Determine if the maximum number of level has been reached.
+        if (self.opt.recursion_level > 0) {
+            if (self.curr_recursion_level > self.opt.recursion_level) {
+                // reached max recursion level
+                return;
+            }
+        }
+
         const total = self.items.items.len;
 
         for (self.items.items, 0..) |val, i| {
@@ -316,6 +325,7 @@ pub const Files = struct {
                     sub_dir,
                     self.opt,
                 );
+                sub_files.curr_recursion_level = self.curr_recursion_level + 1;
 
                 // recursive itself
                 const child_connector = if (is_last) "    " else "│   ";

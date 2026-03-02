@@ -121,7 +121,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         allocator,
         io,
         dir,
-        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file },
+        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level },
     );
     defer files.deinit();
 

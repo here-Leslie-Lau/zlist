@@ -49,8 +49,6 @@ pub const FilesOptions = struct {
     show_detail: bool = false,
     /// show hidden files
     show_hidden: bool = false,
-    /// show recursive
-    recursive: bool = false,
     /// pure mode, only show file names without icons and colors
     pure: bool = false,
     /// sort type
@@ -59,6 +57,10 @@ pub const FilesOptions = struct {
     only_dir: bool = false,
     /// only show files, not directories
     only_file: bool = false,
+    /// show recursive
+    recursive: bool = false,
+    /// limit the depth of recursion. 0 means infinite.
+    recursion_level: i8 = -1,
 };
 
 pub const FileOptions = struct {
