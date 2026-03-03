@@ -22,7 +22,6 @@ pub const File = struct {
     /// Initialize a File from a directory entry.
     /// Return null if the file should be skipped (e.g., hidden files when not showing hidden).
     pub inline fn init(
-        io: std.Io,
         entry: *const std.Io.Dir.Entry,
         dir: *const std.Io.Dir,
         opt: opts.FileOptions,
@@ -52,7 +51,7 @@ pub const File = struct {
 
         if (opt.show_detail) {
             // read more file details
-            file.stat_t = file.getStat(dir, io);
+            file.stat_t = file.getStat(dir);
 
             if (builtin.os.tag != .windows) {
                 file.username = file.getName(.User) orelse "UNKNOWN";
@@ -71,11 +70,7 @@ pub const File = struct {
         return lhs.name.len < rhs.name.len;
     }
 
-    pub inline fn getStat(self: Self, dir: *const std.Io.Dir, io: std.Io) ?Stat {
-        const stat = dir.statFile(io, self.name, .{}) catch return null;
-        const f = dir.openFile(io, self.name, .{}) catch return null;
-        defer f.close(io);
-
+    pub inline fn getStat(self: Self, dir: *const std.Io.Dir) ?Stat {
         switch (builtin.os.tag) {
             .windows => {
                 // does not support
@@ -85,28 +80,34 @@ pub const File = struct {
                 const linux = std.os.linux;
 
                 var statx: linux.Statx = undefined;
-                const errno = linux.errno(linux.statx(f.handle, "", linux.AT.EMPTY_PATH, .{ .GID = true, .UID = true }, &statx));
+                // Use dir.handle to perform fstatat/statx without opening the file
+                const errno = linux.errno(linux.statx(dir.handle, self.name.ptr, linux.AT.SYMLINK_NOFOLLOW, .{ .BASIC_STATS = true }, &statx));
 
                 switch (errno) {
                     .SUCCESS => {},
-                    .ACCES => {},
-                    .BADF => {},
-                    .FAULT => {},
-                    .INVAL => {},
-                    .LOOP => {},
-                    .NAMETOOLONG => {},
-                    .NOENT => {},
-                    .NOMEM => {},
-                    .NOTDIR => {},
-                    // no other errors are possible
-                    else => unreachable,
+                    else => return null,
                 }
 
+                // convert statx mode to permissions and kind
+                const m = statx.mode;
+                const kind = switch (m & linux.S.IFMT) {
+                    linux.S.IFDIR => std.Io.File.Kind.directory,
+                    linux.S.IFLNK => std.Io.File.Kind.sym_link,
+                    linux.S.IFSOCK => std.Io.File.Kind.unix_domain_socket,
+                    linux.S.IFCHR => std.Io.File.Kind.character_device,
+                    linux.S.IFBLK => std.Io.File.Kind.block_device,
+                    linux.S.IFIFO => std.Io.File.Kind.named_pipe,
+                    else => std.Io.File.Kind.file, // IFREG
+                };
+
+                // std.Io.File.Permissions representation (same as unix mode bits)
+                const permissions: std.Io.File.Permissions = @enumFromInt(m & 0o7777);
+
                 return .{
-                    .size = stat.size,
-                    .kind = stat.kind,
-                    .permissions = stat.permissions,
-                    .mtime = stat.mtime,
+                    .size = statx.size,
+                    .kind = kind,
+                    .permissions = permissions,
+                    .mtime = .{ .nanoseconds = @as(i96, @intCast(statx.mtime.tv_sec)) * std.time.ns_per_s + @as(i96, @intCast(statx.mtime.tv_nsec)) },
 
                     // TODO leslie: cache these values in File struct to avoid extra syscalls
                     .uid = statx.uid,
@@ -114,18 +115,38 @@ pub const File = struct {
                 };
             },
             else => {
-                // posix-like
+                // posix-like (macOS, FreeBSD, etc)
                 var buf: std.c.Stat = undefined;
-                const result = std.c.fstat(f.handle, &buf);
+
+                // Ensure the path is null-terminated for the C API
+                var name_z: [std.fs.max_path_bytes]u8 = undefined;
+                @memcpy(name_z[0..self.name.len], self.name);
+                name_z[self.name.len] = 0;
+
+                // Use std.c.fstatat to avoid opening the file, providing AT_SYMLINK_NOFOLLOW
+                const result = std.c.fstatat(dir.handle, @ptrCast(&name_z), &buf, std.posix.AT.SYMLINK_NOFOLLOW);
                 if (result != 0) {
                     return null;
                 }
 
+                const m = buf.mode;
+                const kind = switch (m & std.posix.S.IFMT) {
+                    std.posix.S.IFDIR => std.Io.File.Kind.directory,
+                    std.posix.S.IFLNK => std.Io.File.Kind.sym_link,
+                    std.posix.S.IFSOCK => std.Io.File.Kind.unix_domain_socket,
+                    std.posix.S.IFCHR => std.Io.File.Kind.character_device,
+                    std.posix.S.IFBLK => std.Io.File.Kind.block_device,
+                    std.posix.S.IFIFO => std.Io.File.Kind.named_pipe,
+                    else => std.Io.File.Kind.file,
+                };
+
+                const permissions: std.Io.File.Permissions = @enumFromInt(m & 0o7777);
+
                 return .{
-                    .size = stat.size,
-                    .kind = stat.kind,
-                    .permissions = stat.permissions,
-                    .mtime = stat.mtime,
+                    .size = @intCast(buf.size),
+                    .kind = kind,
+                    .permissions = permissions,
+                    .mtime = .{ .nanoseconds = @as(i96, @intCast(buf.mtimespec.sec)) * std.time.ns_per_s + @as(i96, @intCast(buf.mtimespec.nsec)) },
 
                     // TODO leslie: cache these values in File struct to avoid extra syscalls
                     .uid = buf.uid,
