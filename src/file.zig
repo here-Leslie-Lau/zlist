@@ -79,9 +79,14 @@ pub const File = struct {
             .linux => {
                 const linux = std.os.linux;
 
+                // Ensure the path is null-terminated for the C API
+                var name_z: [std.fs.max_path_bytes]u8 = undefined;
+                @memcpy(name_z[0..self.name.len], self.name);
+                name_z[self.name.len] = 0;
+
                 var statx: linux.Statx = undefined;
                 // Use dir.handle to perform fstatat/statx without opening the file
-                const errno = linux.errno(linux.statx(dir.handle, self.name.ptr, linux.AT.SYMLINK_NOFOLLOW, .{ .BASIC_STATS = true }, &statx));
+                const errno = linux.errno(linux.statx(dir.handle, @ptrCast(&name_z), linux.AT.SYMLINK_NOFOLLOW, linux.STATX.BASIC_STATS, &statx));
 
                 switch (errno) {
                     .SUCCESS => {},
@@ -107,7 +112,7 @@ pub const File = struct {
                     .size = statx.size,
                     .kind = kind,
                     .permissions = permissions,
-                    .mtime = .{ .nanoseconds = @as(i96, @intCast(statx.mtime.tv_sec)) * std.time.ns_per_s + @as(i96, @intCast(statx.mtime.tv_nsec)) },
+                    .mtime = .{ .nanoseconds = @as(i96, @intCast(statx.mtime.sec)) * std.time.ns_per_s + @as(i96, @intCast(statx.mtime.nsec)) },
 
                     // TODO leslie: cache these values in File struct to avoid extra syscalls
                     .uid = statx.uid,
