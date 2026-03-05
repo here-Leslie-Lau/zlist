@@ -118,41 +118,107 @@ pub const Files = struct {
         const term = try self.getTerminal(stdout, stdout_file);
 
         const term_width = self.getTerminalWidth(stdout_file.handle);
-        const col_width = self.max_display_len + 2; // 2 spaces padding
-        var cols = term_width / col_width;
-        if (cols < 1) {
-            cols = 1;
+        const total_items = self.items.items.len;
+
+        if (total_items == 0) {
+            return;
         }
 
-        for (self.items.items, 0..) |val, i| {
-            const icon = self.getIcon(val.is_dir, val.name);
+        // Max possible columns (assuming each item is at least 1 char + padding)
+        const MAX_COLS: usize = 512;
+        var max_possible_cols = term_width / 3;
+        if (max_possible_cols == 0) {
+            max_possible_cols = 1;
+        }
+        if (max_possible_cols > MAX_COLS) {
+            max_possible_cols = MAX_COLS;
+        }
+        if (max_possible_cols > total_items) {
+            max_possible_cols = total_items;
+        }
 
-            if (!pure) {
-                // set color
-                try term.setColor(self.getColor(val.is_dir, val.name));
-                // print item
-                try term.writer.print(comptime opts.PrintMode.Normal.toString(), .{
-                    icon,
-                    val.name,
-                    self.max_display_len - icon.len + 1, // +1 for padding
-                });
-            } else {
-                // pure mode
-                try term.writer.print(comptime opts.PrintMode.NormalPure.toString(), .{ val.name, self.max_display_len + 1 });
+        var optimal_cols: usize = 1;
+        var optimal_rows: usize = total_items;
+        var col_widths: [MAX_COLS]usize = undefined;
+        var final_col_widths: [MAX_COLS]usize = undefined;
+
+        var current_cols = max_possible_cols;
+        while (current_cols > 1) : (current_cols -= 1) {
+            // rows = cell(total_items / cols)
+            const rows = (total_items + current_cols - 1) / current_cols;
+            @memset(col_widths[0..current_cols], 0);
+
+            var total_width: usize = 0;
+            var valid = true;
+
+            for (0..current_cols) |c| {
+                for (0..rows) |r| {
+                    const idx = c * rows + r;
+                    if (idx >= total_items) continue;
+
+                    const item = self.items.items[idx];
+                    // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) + 1 space = 5.
+                    const item_len = if (pure) item.name.len + 2 else item.name.len + 5;
+
+                    if (item_len > col_widths[c]) {
+                        col_widths[c] = item_len;
+                    }
+                }
+                total_width += col_widths[c];
+                if (c < current_cols - 1) {
+                    total_width += 2; // 2 spaces between columns
+                }
+
+                if (total_width > term_width) {
+                    valid = false;
+                    break;
+                }
             }
 
-            if (!pure) {
-                // reset color
-                try term.setColor(Terminal.Color.reset);
-            }
-
-            // make sure to print newline after each row
-            if ((i + 1) % cols == 0) {
-                try term.writer.print("\n", .{});
+            if (valid) {
+                optimal_cols = current_cols;
+                optimal_rows = rows;
+                @memcpy(final_col_widths[0..current_cols], col_widths[0..current_cols]);
+                break;
             }
         }
 
-        try term.writer.print("\n", .{});
+        if (optimal_cols == 1) {
+            optimal_rows = total_items;
+            final_col_widths[0] = self.max_display_len + (if (pure) 2 else 5);
+        }
+
+        for (0..optimal_rows) |r| {
+            for (0..optimal_cols) |c| {
+                const idx = c * optimal_rows + r;
+                if (idx >= total_items) continue;
+
+                const val = self.items.items[idx];
+                const item_len = if (pure) val.name.len + 2 else val.name.len + 5;
+
+                // Print prefix, icon and name
+                if (!pure) {
+                    const icon = self.getIcon(val.is_dir, val.name);
+                    try term.writer.print("  ", .{});
+
+                    try term.setColor(self.getColor(val.is_dir, val.name));
+                    try term.writer.print("{s} {s}", .{ icon, val.name });
+                    try term.setColor(Terminal.Color.reset);
+                } else {
+                    try term.writer.print("  {s}", .{val.name});
+                }
+
+                // Print padding
+                if (c < optimal_cols - 1) {
+                    const padding = final_col_widths[c] - item_len + 2; // +2 for inter-column space
+                    for (0..padding) |_| {
+                        try term.writer.print(" ", .{});
+                    }
+                }
+            }
+            try term.writer.print("\n", .{});
+        }
+
         try term.writer.flush();
     }
 
@@ -353,7 +419,9 @@ test "get_detail" {
 
     try tmp_dir.dir.createDirPath(io, "sub_dir");
 
-    const allocator = testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     var files = try Files.init(
         allocator,
@@ -379,7 +447,9 @@ test "recursive" {
     defer tmp_sub_dir.close(io);
     _ = try tmp_sub_dir.createFile(io, "sub_test1.txt", .{});
 
-    const allocator = testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     // stdout
     var stdout_buf: [4096]u8 = undefined;
