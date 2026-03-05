@@ -14,6 +14,7 @@ I built this project to learn the language, understand manual memory management,
 
 While it's a learning project, it still packs some handy features:
 
+*   **Smart Grid Layout**: Dynamically adjusts column widths to keep the output compact and readable, saving screen space.
 *   **Visual Context**:
     *   **Nerd Fonts** support out of the box.
     *   Specific icons for your code (`Zig`, `Rust`, `Go`, `Python`, `JS/TS`, `C/C++`, etc.).
@@ -116,6 +117,7 @@ zl -D
 *   [x] Depth control for recursion (`-L`)
 *   [x] Clean output mode (`-p`)
 *   [x] Filter by files or directories (`-d`, `-D`)
+*   [x] Smart dynamic grid layout
 *   [ ] Multi-threading for faster `stat` calls
 *   [ ] Custom color/icon configurations (Maybe, if you need it)
 
