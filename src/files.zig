@@ -15,6 +15,8 @@ pub const Files = struct {
     io: std.Io,
     items: std.ArrayList(file.File),
     opt: opts.FilesOptions,
+    total_folders: usize = 0,
+    total_files: usize = 0,
 
     icon_inventory: std.StaticStringMap([]const u8) = std.StaticStringMap([]const u8).initComptime(.{
         .{ ".zig", " " },
@@ -397,6 +399,19 @@ pub const Files = struct {
                 try sub_files.listRecursive(term, new_prefix, false, sub_dir, pure);
             }
         }
+    }
+
+    /// print report after listing.
+    /// it will not flush the writer, plz flush it by yourself after calling this function.
+    pub inline fn printReport(self: Self, writer: anytype) !void {
+        try writer.print(
+            "  Found {d} contents in directory.\n  Folders: {d}\n  Files: {d}\n",
+            .{
+                self.total_folders + self.total_files,
+                self.total_folders,
+                self.total_files,
+            },
+        );
     }
 
     /// get terminal info
