@@ -142,8 +142,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // zl -l
         switch (pure) {
             // pure mode
-            true => try files.listDetail(true),
-            false => try files.listDetail(false),
+            true => try files.listDetail(.{ .pure = true }),
+            false => try files.listDetail(.{ .pure = false }),
         }
     } else if (recursive) {
         // zl -r
@@ -156,8 +156,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
         switch (pure) {
             // pure mode
-            true => try files.listRecursive(term, "", true, dir, true),
-            false => try files.listRecursive(term, "", true, dir, false),
+            true => try files.listRecursive(term, "", true, dir, .{ .pure = true }),
+            false => try files.listRecursive(term, "", true, dir, .{ .pure = false }),
         }
 
         try stdout_writer.interface.flush();
@@ -165,8 +165,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // just ls command
         switch (pure) {
             // pure mode
-            true => try files.list(true),
-            false => try files.list(false),
+            true => try files.list(.{ .pure = true }),
+            false => try files.list(.{ .pure = false }),
         }
     }
 }

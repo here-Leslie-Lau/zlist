@@ -109,7 +109,7 @@ pub const Files = struct {
     }
 
     /// list files in simple mode
-    pub fn list(self: Self, comptime pure: bool) !void {
+    pub fn list(self: Self, comptime mode_opt: opts.ModeOptionsComptime) !void {
         // stdout
         var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
@@ -160,7 +160,7 @@ pub const Files = struct {
 
                     const item = self.items.items[idx];
                     // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) + 1 space = 5.
-                    const item_len = if (pure) item.name.len + 2 else item.name.len + 5;
+                    const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5;
 
                     if (item_len > col_widths[c]) {
                         col_widths[c] = item_len;
@@ -187,7 +187,7 @@ pub const Files = struct {
 
         if (optimal_cols == 1) {
             optimal_rows = total_items;
-            final_col_widths[0] = self.max_display_len + (if (pure) 2 else 5);
+            final_col_widths[0] = self.max_display_len + (if (mode_opt.pure) 2 else 5);
         }
 
         for (0..optimal_rows) |r| {
@@ -196,10 +196,10 @@ pub const Files = struct {
                 if (idx >= total_items) continue;
 
                 const val = self.items.items[idx];
-                const item_len = if (pure) val.name.len + 2 else val.name.len + 5;
+                const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5;
 
                 // Print prefix, icon and name
-                if (!pure) {
+                if (!mode_opt.pure) {
                     const icon = self.getIcon(val.is_dir, val.name);
                     try term.writer.print("  ", .{});
 
@@ -264,7 +264,7 @@ pub const Files = struct {
     }
 
     /// list files in detail mode
-    pub fn listDetail(self: Self, comptime pure: bool) !void {
+    pub fn listDetail(self: Self, comptime mode_opt: opts.ModeOptionsComptime) !void {
         // stdout
         var stdout_buf: [4096]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
@@ -279,7 +279,7 @@ pub const Files = struct {
         var time_buf: [32]u8 = undefined;
 
         for (self.items.items) |val| {
-            if (!pure) {
+            if (!mode_opt.pure) {
                 // first, set color
                 try term.setColor(self.getColor(val.is_dir, val.name));
 
@@ -304,11 +304,25 @@ pub const Files = struct {
                 });
             }
 
-            if (!pure) {
+            if (!mode_opt.pure) {
                 // reset color
                 try term.setColor(Terminal.Color.reset);
             }
             try term.writer.print("\n", .{});
+
+            // count files and folders for report
+            if (mode_opt.report) {
+                if (val.is_dir) {
+                    self.total_folders += 1;
+                } else {
+                    self.total_files += 1;
+                }
+            }
+        }
+
+        if (mode_opt.report) {
+            // print report
+            try self.printReport(stdout);
         }
 
         try term.writer.flush();
@@ -321,7 +335,7 @@ pub const Files = struct {
         prefix: []const u8,
         first: bool,
         dir: std.Io.Dir,
-        comptime pure: bool,
+        comptime mode_opt: opts.ModeOptionsComptime,
     ) !void {
         if (first) {
             try term.writer.print(".\n", .{});
@@ -342,7 +356,7 @@ pub const Files = struct {
             const connector = if (is_last) "└──" else "├──";
 
             // print prefix and connector
-            if (!pure) {
+            if (!mode_opt.pure) {
                 // set color for prefix and connector
                 try term.setColor(Terminal.Color.bright_blue);
             }
@@ -350,13 +364,13 @@ pub const Files = struct {
                 prefix,
                 connector,
             });
-            if (!pure) {
+            if (!mode_opt.pure) {
                 // reset color
                 try term.setColor(Terminal.Color.reset);
             }
 
             // print file/directory name
-            if (!pure) {
+            if (!mode_opt.pure) {
                 try term.setColor(self.getColor(val.is_dir, val.name));
 
                 try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMeta.toString(), .{
@@ -367,7 +381,7 @@ pub const Files = struct {
                 // pure mode, no color and no icon
                 try term.writer.print(comptime opts.PrintMode.RecursiveWithFileMetaPure.toString(), .{val.name});
             }
-            if (!pure) {
+            if (!mode_opt.pure) {
                 try term.setColor(Terminal.Color.reset);
             }
 
@@ -396,7 +410,7 @@ pub const Files = struct {
                 var buf: [128]u8 = undefined;
                 const new_prefix = try std.fmt.bufPrint(&buf, "{s}{s}", .{ prefix, child_connector });
 
-                try sub_files.listRecursive(term, new_prefix, false, sub_dir, pure);
+                try sub_files.listRecursive(term, new_prefix, false, sub_dir, mode_opt);
             }
         }
     }
@@ -446,7 +460,7 @@ test "get_detail" {
     );
     defer files.deinit();
 
-    try files.listDetail(false);
+    try files.listDetail(.{ .pure = false });
 }
 
 test "recursive" {
@@ -481,6 +495,6 @@ test "recursive" {
 
     const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
-    try files.listRecursive(term, "", true, tmp_dir.dir, false);
+    try files.listRecursive(term, "", true, tmp_dir.dir, .{ .pure = false });
     try stdout_writer.interface.flush();
 }

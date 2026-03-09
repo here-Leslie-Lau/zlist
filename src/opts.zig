@@ -73,3 +73,9 @@ pub const FileOptions = struct {
     /// only show files, not directories
     only_file: bool = false,
 };
+
+/// The options of `zl` that are determined at compile time.
+pub const ModeOptionsComptime = struct {
+    pure: bool = false,
+    report: bool = false,
+};
