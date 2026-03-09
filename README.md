@@ -23,6 +23,7 @@ While it's a learning project, it still packs some handy features:
 *   **Unique Default Sorting**: Defaults to sorting by **filename length** (because finding that one short file in a sea of long names is always a pain). Standard A-Z sorting is also available.
 *   **Dig Deeper**: A basic `-r` flag to peek into subdirectories, Or `-L` to control how deep you want to go.
 *   **Filters**: Quickly isolate just directories (`-d`) or just files (`-D`).
+*   **Summary Report**: Use `-R` to see a quick count of files and folders after listing.
 
 ## 📸 Preview
 
@@ -73,6 +74,7 @@ zl [OPTIONS] [PATH]
 | `-p`, `--pure` | Clean output without colors or icons (useful for pipes). |
 | `-d`, `--dir` | Only show directories. |
 | `-D`, `--no_dir` | Only show files (exclude directories). |
+| `-R`, `--report` | Show a brief summary of file and folder counts. |
 | `-h`, `--help` | Print help message. |
 
 ### Examples
@@ -107,6 +109,11 @@ zl -d
 zl -D
 ```
 
+**Show summary report:**
+```bash
+zl -R
+```
+
 ## 🛣 Roadmap
 
 *   [x] Basic file listing & recursion
@@ -118,6 +125,7 @@ zl -D
 *   [x] Clean output mode (`-p`)
 *   [x] Filter by files or directories (`-d`, `-D`)
 *   [x] Smart dynamic grid layout
+*   [x] Summary report (`-R`)
 *   [ ] Multi-threading for faster `stat` calls
 *   [ ] Custom color/icon configurations (Maybe, if you need it)
 
