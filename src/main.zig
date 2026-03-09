@@ -16,6 +16,7 @@ const params_desc: []const u8 = blk: {
     \\-r, --recursive           Recursively list subdirectories encountered. Equivalent to -L 0.
     \\-L, --level <INT>         Limit the depth of recursion. 0 means infinite.
     \\-p, --pure                Only show file names, without colors or other formatting.
+    \\-R, --report              Shows brief report about number of files and folders shown.
     \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
     \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
     \\<str>...
@@ -54,6 +55,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var show_hidden: bool = false;
     var show_detail: bool = false;
     var pure: bool = false;
+    var report: bool = false;
     var sort_type: opts.SortType = .length;
     var only_dir: bool = false;
     var only_file: bool = false;
@@ -83,6 +85,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // set pure mode
     if (res.args.pure != 0) {
         pure = true;
+    }
+    if (res.args.report != 0) {
+        report = true;
     }
     // only show directories or files
     if (res.args.dir != 0) {
@@ -128,7 +133,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     if (files.items.items.len == 0) {
         // no files to show
         // stdout
-        var stdout_buf: [512]u8 = undefined;
+        var stdout_buf: [256]u8 = undefined;
         const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
@@ -138,37 +143,37 @@ pub fn main(init: std.process.Init.Minimal) !void {
         return;
     }
 
+    // stdout
+    var stdout_buf: [4096]u8 = undefined;
+    const stdout_file = std.Io.File.stdout();
+    var stdout_writer = stdout_file.writer(io, &stdout_buf);
+    // get term
+    const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
+
     if (show_detail) {
         // zl -l
         switch (pure) {
             // pure mode
-            true => try files.listDetail(.{ .pure = true }),
-            false => try files.listDetail(.{ .pure = false }),
+            true => try files.listDetail(term, .{ .pure = true }),
+            false => try files.listDetail(term, .{ .pure = false }),
         }
     } else if (recursive) {
         // zl -r
-        // stdout
-        var stdout_buf: [4096]u8 = undefined;
-        const stdout_file = std.Io.File.stdout();
-        var stdout_writer = stdout_file.writer(io, &stdout_buf);
-        // get term
-        const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
-
         switch (pure) {
             // pure mode
             true => try files.listRecursive(term, "", true, dir, .{ .pure = true }),
             false => try files.listRecursive(term, "", true, dir, .{ .pure = false }),
         }
-
-        try stdout_writer.interface.flush();
     } else {
         // just ls command
         switch (pure) {
             // pure mode
-            true => try files.list(.{ .pure = true }),
-            false => try files.list(.{ .pure = false }),
+            true => try files.list(term, stdout_file.handle, .{ .pure = true }),
+            false => try files.list(term, stdout_file.handle, .{ .pure = false }),
         }
     }
+
+    try stdout_writer.interface.flush();
 }
 
 test {

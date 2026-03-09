@@ -51,6 +51,8 @@ pub const FilesOptions = struct {
     show_hidden: bool = false,
     /// pure mode, only show file names without icons and colors
     pure: bool = false,
+    /// report mode, shows brief report about number of files and folders shown
+    report: bool = false,
     /// sort type
     sort_type: SortType = .name,
     /// only show directories, not files
@@ -76,6 +78,12 @@ pub const FileOptions = struct {
 
 /// The options of `zl` that are determined at compile time.
 pub const ModeOptionsComptime = struct {
+    const Self = @This();
     pure: bool = false,
-    report: bool = false,
+
+    pub inline fn initPure() Self {
+        return comptime Self{
+            .pure = true,
+        };
+    }
 };

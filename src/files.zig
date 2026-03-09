@@ -59,6 +59,8 @@ pub const Files = struct {
         errdefer files.deinit(allocator);
 
         var max_len: usize = 0;
+        var total_folders: usize = 0;
+        var total_files: usize = 0;
 
         var it = dir.iterate();
         while (try it.next(io)) |entry| {
@@ -81,6 +83,14 @@ pub const Files = struct {
                 }
             }
 
+            if (opt.report) {
+                if (fs.is_dir) {
+                    total_folders += 1;
+                } else {
+                    total_files += 1;
+                }
+            }
+
             try files.append(allocator, fs);
         }
 
@@ -97,6 +107,8 @@ pub const Files = struct {
 
         return .{
             .max_display_len = max_len,
+            .total_folders = total_folders,
+            .total_files = total_files,
             .allocator = allocator,
             .io = io,
             .items = files,
@@ -109,17 +121,13 @@ pub const Files = struct {
     }
 
     /// list files in simple mode
-    pub fn list(self: Self, comptime mode_opt: opts.ModeOptionsComptime) !void {
-        // stdout
-        var stdout_buf: [4096]u8 = undefined;
-        const stdout_file = std.Io.File.stdout();
-        var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
-
-        const stdout = &stdout_writer.interface;
-        // get term
-        const term = try self.getTerminal(stdout, stdout_file);
-
-        const term_width = self.getTerminalWidth(stdout_file.handle);
+    pub fn list(
+        self: Self,
+        term: Terminal,
+        handle: std.Io.File.Handle,
+        comptime mode_opt: opts.ModeOptionsComptime,
+    ) !void {
+        const term_width = self.getTerminalWidth(handle);
         const total_items = self.items.items.len;
 
         if (total_items == 0) {
@@ -220,8 +228,6 @@ pub const Files = struct {
             }
             try term.writer.print("\n", .{});
         }
-
-        try term.writer.flush();
     }
 
     /// get terminal width
@@ -264,16 +270,7 @@ pub const Files = struct {
     }
 
     /// list files in detail mode
-    pub fn listDetail(self: Self, comptime mode_opt: opts.ModeOptionsComptime) !void {
-        // stdout
-        var stdout_buf: [4096]u8 = undefined;
-        const stdout_file = std.Io.File.stdout();
-        var stdout_writer = stdout_file.writer(self.io, &stdout_buf);
-
-        const stdout = &stdout_writer.interface;
-        // get term
-        const term = try self.getTerminal(stdout, stdout_file);
-
+    pub fn listDetail(self: Self, term: Terminal, comptime mode_opt: opts.ModeOptionsComptime) !void {
         var perm_buf: [10]u8 = undefined;
         var size_buf: [32]u8 = undefined;
         var time_buf: [32]u8 = undefined;
@@ -309,28 +306,12 @@ pub const Files = struct {
                 try term.setColor(Terminal.Color.reset);
             }
             try term.writer.print("\n", .{});
-
-            // count files and folders for report
-            if (mode_opt.report) {
-                if (val.is_dir) {
-                    self.total_folders += 1;
-                } else {
-                    self.total_files += 1;
-                }
-            }
         }
-
-        if (mode_opt.report) {
-            // print report
-            try self.printReport(stdout);
-        }
-
-        try term.writer.flush();
     }
 
     /// list files recursively
     pub fn listRecursive(
-        self: Self,
+        self: *Self,
         term: Terminal,
         prefix: []const u8,
         first: bool,
@@ -411,6 +392,10 @@ pub const Files = struct {
                 const new_prefix = try std.fmt.bufPrint(&buf, "{s}{s}", .{ prefix, child_connector });
 
                 try sub_files.listRecursive(term, new_prefix, false, sub_dir, mode_opt);
+
+                // accumulate counts from subdirectories
+                self.total_folders += sub_files.total_folders;
+                self.total_files += sub_files.total_files;
             }
         }
     }
@@ -452,6 +437,11 @@ test "get_detail" {
     defer arena.deinit();
     const allocator = arena.allocator();
 
+    // stdout
+    var stdout_buf: [4096]u8 = undefined;
+    const stdout_file = std.Io.File.stdout();
+    var stdout_writer = stdout_file.writer(io, &stdout_buf);
+
     var files = try Files.init(
         allocator,
         io,
@@ -460,7 +450,10 @@ test "get_detail" {
     );
     defer files.deinit();
 
-    try files.listDetail(.{ .pure = false });
+    const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
+
+    try files.listDetail(term, .{ .pure = false });
+    try stdout_writer.interface.flush();
 }
 
 test "recursive" {
