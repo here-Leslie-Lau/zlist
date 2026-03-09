@@ -404,7 +404,7 @@ pub const Files = struct {
     /// it will not flush the writer, plz flush it by yourself after calling this function.
     pub inline fn printReport(self: Self, writer: anytype) !void {
         try writer.print(
-            "  Found {d} contents in directory.\n  Folders: {d}\n  Files: {d}\n",
+            "\n  Found {d} contents in directory.\n  Folders: {d}\n  Files: {d}\n",
             .{
                 self.total_folders + self.total_files,
                 self.total_folders,

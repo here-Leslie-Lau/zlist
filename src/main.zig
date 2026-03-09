@@ -126,7 +126,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         allocator,
         io,
         dir,
-        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level },
+        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report },
     );
     defer files.deinit();
 
@@ -171,6 +171,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
             true => try files.list(term, stdout_file.handle, .{ .pure = true }),
             false => try files.list(term, stdout_file.handle, .{ .pure = false }),
         }
+    }
+
+    if (report) {
+        try files.printReport(&stdout_writer.interface);
     }
 
     try stdout_writer.interface.flush();
