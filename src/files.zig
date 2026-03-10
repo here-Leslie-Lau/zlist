@@ -48,6 +48,11 @@ pub const Files = struct {
         .{ "", Terminal.Color.bright_yellow },
     }),
 
+    /// for caching username and groupname, key is uid/gid, value is username/groupname.
+    /// since getting username from uid is a costly operation, we can cache it to improve performance.
+    username_inventory: std.AutoHashMap(std.c.uid_t, []const u8),
+    groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8),
+
     /// init a Files from a directory
     pub fn init(
         allocator: mem.Allocator,
@@ -62,12 +67,22 @@ pub const Files = struct {
         var total_folders: usize = 0;
         var total_files: usize = 0;
 
+        // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
+        var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
+        var groupname_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
+        if (opt.show_detail) {
+            username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
+            groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
+        }
+
         var it = dir.iterate();
         while (try it.next(io)) |entry| {
             var fs = (try file.File.init(
                 &entry,
                 &dir,
                 .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file },
+                &username_inventory,
+                &groupname_inventory,
             )) orelse continue;
 
             // copy name
@@ -113,6 +128,8 @@ pub const Files = struct {
             .io = io,
             .items = files,
             .opt = opt,
+            .username_inventory = username_inventory,
+            .groupname_inventory = groupname_inventory,
         };
     }
 

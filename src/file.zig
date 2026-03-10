@@ -25,6 +25,8 @@ pub const File = struct {
         entry: *const std.Io.Dir.Entry,
         dir: *const std.Io.Dir,
         opt: opts.FileOptions,
+        username_inventory: *std.AutoHashMap(std.c.uid_t, []const u8),
+        groupname_inventory: *std.AutoHashMap(std.c.gid_t, []const u8),
     ) !?Self {
         const is_dir: bool = (entry.kind == .directory);
         const is_hidden: bool = (entry.name[0] == '.');
@@ -54,8 +56,8 @@ pub const File = struct {
             file.stat_t = file.getStat(dir);
 
             if (builtin.os.tag != .windows) {
-                file.username = file.getName(.User) orelse "UNKNOWN";
-                file.groupname = file.getName(.Group) orelse "UNKNOWN";
+                file.username = file.getName(.User, username_inventory, groupname_inventory) orelse "UNKNOWN";
+                file.groupname = file.getName(.Group, username_inventory, groupname_inventory) orelse "UNKNOWN";
             }
         }
 
@@ -215,27 +217,49 @@ pub const File = struct {
     };
 
     /// get user name (enum User or Group)
-    pub inline fn getName(self: Self, name: NameByID) ?[]const u8 {
+    pub inline fn getName(
+        self: Self,
+        name: NameByID,
+        ui: *std.AutoHashMap(std.c.uid_t, []const u8),
+        gi: *std.AutoHashMap(std.c.gid_t, []const u8),
+    ) ?[]const u8 {
         if (self.stat_t == null) {
             return null;
         }
 
         switch (name) {
             .User => {
-                const passwd = std.c.getpwuid(self.stat_t.?.uid);
+                const uid = self.stat_t.?.uid;
+                // first check the cache to avoid extra syscalls
+                if (ui.get(uid)) |str| {
+                    return str;
+                }
+
+                const passwd = std.c.getpwuid(uid);
                 if (passwd == null) {
                     return null;
                 }
 
-                return std.mem.span(passwd.?.*.name);
+                const str = std.mem.span(passwd.?.*.name) orelse return null;
+                ui.put(uid, str) catch return null;
+
+                return str;
             },
             .Group => {
-                const group = std.c.getgrgid(self.stat_t.?.gid);
+                const gid = self.stat_t.?.gid;
+                if (gi.get(gid)) |str| {
+                    return str;
+                }
+
+                const group = std.c.getgrgid(gid);
                 if (group == null) {
                     return null;
                 }
 
-                return std.mem.span(group.?.*.name);
+                const str = std.mem.span(group.?.*.name) orelse return null;
+                gi.put(gid, str) catch return null;
+
+                return str;
             },
         }
     }
@@ -249,7 +273,7 @@ pub const File = struct {
         var size = self.stat_t.?.size;
         var i: usize = 0;
         while (i < size_units.len - 1 and size >= 1024) : (i += 1) {
-            size = size / 1024;
+            size = size >> 10; // divide by 1024
         }
 
         return std.fmt.bufPrint(buf, "{d}{s}", .{ size, size_units[i] });
