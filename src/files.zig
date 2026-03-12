@@ -114,6 +114,10 @@ pub const Files = struct {
                 // sort by name length
                 mem.sortUnstable(file.File, files.items, {}, file.File.nameLenLessThan);
             },
+            .dir_first => {
+                // sort by directory first
+                mem.sortUnstable(file.File, files.items, {}, file.File.dirMoreThan);
+            },
             else => {
                 // sort by name ascending
                 mem.sortUnstable(file.File, files.items, {}, file.File.nameLessThan);

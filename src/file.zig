@@ -72,6 +72,16 @@ pub const File = struct {
         return lhs.name.len < rhs.name.len;
     }
 
+    pub fn dirMoreThan(_: void, lhs: Self, rhs: Self) bool {
+        // directories first, then files
+        if (lhs.is_dir != rhs.is_dir) {
+            // true if lhs is dir and rhs is not
+            return lhs.is_dir;
+        }
+        // otherwise, consider them equal for sorting
+        return false;
+    }
+
     pub inline fn getStat(self: Self, dir: *const std.Io.Dir) ?Stat {
         switch (builtin.os.tag) {
             .windows => {

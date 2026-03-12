@@ -42,6 +42,8 @@ pub const SortType = enum {
     name,
     /// sort by name length(asc). Default
     length,
+    /// sort by group directories first
+    dir_first,
 };
 
 pub const FilesOptions = struct {
