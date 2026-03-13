@@ -25,11 +25,8 @@ const params_desc: []const u8 = blk: {
 };
 
 pub fn main(init: std.process.Init.Minimal) !void {
-    // get allocator
-    var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa_impl.deinit();
-    const gpa = gpa_impl.allocator();
-    var arena_impl = std.heap.ArenaAllocator.init(gpa);
+    // get allocator (c_allocator and arena allocator)
+    var arena_impl = std.heap.ArenaAllocator.init(std.heap.c_allocator);
     defer arena_impl.deinit();
     const allocator = arena_impl.allocator();
 
