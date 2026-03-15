@@ -66,11 +66,12 @@ pub const Files = struct {
         var max_len: usize = 0;
         var total_folders: usize = 0;
         var total_files: usize = 0;
+        const load_stat = opt.show_detail;
 
         // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
         var groupname_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
-        if (opt.show_detail) {
+        if (load_stat) {
             username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
             groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
         }
@@ -80,7 +81,7 @@ pub const Files = struct {
             var fs = (try file.File.init(
                 &entry,
                 &dir,
-                .{ .show_detail = opt.show_detail, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file },
+                .{ .load_stat = load_stat, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file },
                 &username_inventory,
                 &groupname_inventory,
             )) orelse continue;

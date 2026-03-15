@@ -8,7 +8,7 @@ var threaded: std.Io.Threaded = .init_single_threaded;
 const io = threaded.io();
 
 const params_desc: []const u8 = blk: {
-    break :blk 
+    break :blk
     \\-h, --help                Usage: zl [OPTIONS: -l -a -s=length ...] [Directory]
     \\-l, --long                List files in the long format.
     \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).

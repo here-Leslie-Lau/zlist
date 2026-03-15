@@ -62,7 +62,7 @@ pub const File = struct {
             .groupname = "",
         };
 
-        if (opt.show_detail) {
+        if (opt.load_stat) {
             // read more file details
             file.stat_t = file.getStat(dir);
 

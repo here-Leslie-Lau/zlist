@@ -68,8 +68,8 @@ pub const FilesOptions = struct {
 };
 
 pub const FileOptions = struct {
-    /// show detail mode
-    show_detail: bool = false,
+    /// load file stat, which is needed for showing mtime, size, permissions, etc. but can be slow for large directories. Default is false.
+    load_stat: bool = false,
     /// show hidden files
     show_hidden: bool = false,
     /// only show directories, not files
