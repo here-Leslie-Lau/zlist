@@ -93,6 +93,15 @@ pub const File = struct {
         return false;
     }
 
+    pub fn mtimeMoreThan(_: void, lhs: Self, rhs: Self) bool {
+        if (lhs.stat_t == null or rhs.stat_t == null) {
+            return false;
+        }
+
+        // sort by modification time, newest first
+        return lhs.stat_t.?.mtime.toMilliseconds() > rhs.stat_t.?.mtime.toMilliseconds();
+    }
+
     pub inline fn getStat(self: Self, dir: *const std.Io.Dir) ?Stat {
         switch (builtin.os.tag) {
             .windows => {

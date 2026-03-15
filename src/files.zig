@@ -66,7 +66,10 @@ pub const Files = struct {
         var max_len: usize = 0;
         var total_folders: usize = 0;
         var total_files: usize = 0;
-        const load_stat = opt.show_detail;
+
+        // we need to load stat
+        // if show_detail is true or sort by mtime, otherwise we can skip loading stat to improve performance.
+        const load_stat = (opt.show_detail or opt.sort_type == .mtime);
 
         // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
@@ -118,6 +121,10 @@ pub const Files = struct {
             .dir_first => {
                 // sort by directory first
                 mem.sortUnstable(file.File, files.items, {}, file.File.dirMoreThan);
+            },
+            .mtime => {
+                // sort by modification time desc
+                mem.sortUnstable(file.File, files.items, {}, file.File.mtimeMoreThan);
             },
             else => {
                 // sort by name ascending
