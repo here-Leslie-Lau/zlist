@@ -20,7 +20,7 @@ While it's a learning project, it still packs some handy features:
     *   Specific icons for your code (`Zig`, `Rust`, `Go`, `Python`, `JS/TS`, `C/C++`, etc.).
     *   Highlights directories and Markdown files so you spot them instantly.
 *   **Smart Details**: Permissions, user/group, sizes, and timestamps formatted to be actually readable.
-*   **Sorting**: Default sorting is A-Z (name), with options for **filename length** or **directories first**.
+*   **Sorting**: Default sorting is A-Z (name), with options for **filename length**, **directories first**, or **modification time** (newest first).
 *   **Dig Deeper**: A basic `-r` flag to peek into subdirectories, Or `-L` to control how deep you want to go.
 *   **Filters**: Quickly isolate just directories (`-d`) or just files (`-D`).
 *   **Summary Report**: Use `-R` to see a quick count of files and folders after listing.
@@ -68,7 +68,7 @@ zl [OPTIONS] [PATH]
 | :--- | :--- |
 | `-l`, `--long` | Enable detailed view (permissions, size, date, user). |
 | `-a`, `--a` | Show hidden files (starting with `.`). |
-| `-s`, `--sort <mode>` | `name` (A-Z) [Default]<br>`length` (Shortest first)<br>`dir_first` (Dirs first) |
+| `-s`, `--sort <mode>` | `name` (A-Z) [Default]<br>`length` (Shortest first)<br>`dir_first` (Dirs first)<br>`mtime` (Newest first) |
 | `-r`, `--recursive` | Recursively list subdirectories encountered. |
 | `-L`, `--level <INT>` | Limit the depth of recursion (use `0` for infinite depth). |
 | `-p`, `--pure` | Clean output without colors or icons (useful for pipes). |
@@ -119,7 +119,7 @@ zl -R
 *   [x] Basic file listing & recursion
 *   [x] Color output & Nerd Font icons
 *   [x] Detailed file stats
-*   [x] Sorting by name (default) and length
+*   [x] Sorting by name (default), length, and modification time
 *   [x] Recursive directory traversal (`-r`)
 *   [x] Depth control for recursion (`-L`)
 *   [x] Clean output mode (`-p`)
