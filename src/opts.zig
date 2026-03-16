@@ -46,6 +46,8 @@ pub const SortType = enum {
     dir_first,
     /// sort by modification time(desc)
     mtime,
+    /// sort by file size(desc)
+    size,
 };
 
 pub const FilesOptions = struct {

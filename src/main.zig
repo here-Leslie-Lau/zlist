@@ -12,7 +12,7 @@ const params_desc: []const u8 = blk: {
     \\-h, --help                Usage: zl [OPTIONS: -l -a -s=length ...] [Directory]
     \\-l, --long                List files in the long format.
     \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).
-    \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc), dir_first(directories first), mtime(modification time desc).
+    \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc), dir_first(directories first), mtime(modification time desc), size(file size desc).
     \\-r, --recursive           Recursively list subdirectories encountered. Equivalent to -L 0.
     \\-L, --level <INT>         Limit the depth of recursion. 0 means infinite.
     \\-p, --pure                Only show file names, without colors or other formatting.

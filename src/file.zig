@@ -102,6 +102,15 @@ pub const File = struct {
         return lhs.stat_t.?.mtime.toMilliseconds() > rhs.stat_t.?.mtime.toMilliseconds();
     }
 
+    pub fn sizeMoreThan(_: void, lhs: Self, rhs: Self) bool {
+        if (lhs.stat_t == null or rhs.stat_t == null) {
+            return false;
+        }
+
+        // sort by size, largest first
+        return lhs.stat_t.?.size > rhs.stat_t.?.size;
+    }
+
     pub inline fn getStat(self: Self, dir: *const std.Io.Dir) ?Stat {
         switch (builtin.os.tag) {
             .windows => {
