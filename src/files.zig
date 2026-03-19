@@ -5,6 +5,7 @@ const testing = std.testing;
 
 const file = @import("file.zig");
 const opts = @import("opts.zig");
+const git = @import("git.zig");
 
 pub const Files = struct {
     const Self = @This();
@@ -52,6 +53,8 @@ pub const Files = struct {
     /// since getting username from uid is a costly operation, we can cache it to improve performance.
     username_inventory: std.AutoHashMap(std.c.uid_t, []const u8),
     groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8),
+    /// for caching git status, key is filename, value is git status.
+    git_inventory: std.StringHashMap(git.GitStatus),
 
     /// init a Files from a directory
     pub fn init(
@@ -69,8 +72,9 @@ pub const Files = struct {
 
         // we need to load stat
         // if show_detail is true or sort by mtime or size.
+        // but if git integration is enabled, we can skip loading stat.
         // otherwise we can skip loading stat to improve performance.
-        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size);
+        const load_stat = ((opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size) and !opt.show_git);
 
         // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
@@ -114,6 +118,13 @@ pub const Files = struct {
             try files.append(allocator, fs);
         }
 
+        var git_inventory: std.StringHashMap(git.GitStatus) = undefined;
+        // git integration is enabled, and current directory is a git repository
+        if (opt.show_git and git.isGitRepo(allocator, io, opt.path)) {
+            // load git status inventory
+            git_inventory = try git.getFileStatuses(allocator, io, opt.path);
+        }
+
         switch (opt.sort_type) {
             .length => {
                 // sort by name length
@@ -147,6 +158,7 @@ pub const Files = struct {
             .opt = opt,
             .username_inventory = username_inventory,
             .groupname_inventory = groupname_inventory,
+            .git_inventory = git_inventory,
         };
     }
 

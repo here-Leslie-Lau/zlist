@@ -69,6 +69,12 @@ pub const FilesOptions = struct {
     recursive: bool = false,
     /// limit the depth of recursion. 0 means infinite.
     recursion_level: i8 = -1,
+    /// git integration.
+    /// if true, it will show git status of files and folders.
+    /// which can be slow for large repositories. Default is false.
+    show_git: bool = false,
+    /// path from args
+    path: []const u8 = ".",
 };
 
 pub const FileOptions = struct {
