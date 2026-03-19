@@ -53,6 +53,8 @@ pub const Files = struct {
     /// since getting username from uid is a costly operation, we can cache it to improve performance.
     username_inventory: std.AutoHashMap(std.c.uid_t, []const u8),
     groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8),
+
+    loaded_git: bool = false,
     /// for caching git status, key is filename, value is git status.
     git_inventory: std.StringHashMap(git.GitStatus),
 
@@ -118,11 +120,13 @@ pub const Files = struct {
             try files.append(allocator, fs);
         }
 
+        var loaded_git = false;
         var git_inventory: std.StringHashMap(git.GitStatus) = undefined;
         // git integration is enabled, and current directory is a git repository
         if (opt.show_git and git.isGitRepo(allocator, io, opt.path)) {
             // load git status inventory
             git_inventory = try git.getFileStatuses(allocator, io, opt.path);
+            loaded_git = true;
         }
 
         switch (opt.sort_type) {
@@ -158,6 +162,7 @@ pub const Files = struct {
             .opt = opt,
             .username_inventory = username_inventory,
             .groupname_inventory = groupname_inventory,
+            .loaded_git = loaded_git,
             .git_inventory = git_inventory,
         };
     }
@@ -214,7 +219,9 @@ pub const Files = struct {
 
                     const item = self.items.items[idx];
                     // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) + 1 space = 5.
-                    const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5;
+                    // git mode adds 2 more (git char + 1 space).
+                    const git_extra: usize = if (self.loaded_git and !mode_opt.pure) 2 else 0;
+                    const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5 + git_extra;
 
                     if (item_len > col_widths[c]) {
                         col_widths[c] = item_len;
@@ -241,7 +248,8 @@ pub const Files = struct {
 
         if (optimal_cols == 1) {
             optimal_rows = total_items;
-            final_col_widths[0] = self.max_display_len + (if (mode_opt.pure) 2 else 5);
+            const git_extra: usize = if (self.loaded_git and !mode_opt.pure) 2 else 0;
+            final_col_widths[0] = self.max_display_len + (if (mode_opt.pure) 2 else 5 + git_extra);
         }
 
         for (0..optimal_rows) |r| {
@@ -250,13 +258,26 @@ pub const Files = struct {
                 if (idx >= total_items) continue;
 
                 const val = self.items.items[idx];
-                const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5;
+                const git_extra: usize = if (self.loaded_git and !mode_opt.pure) 2 else 0;
+                const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5 + git_extra;
 
                 // Print prefix, icon and name
                 if (!mode_opt.pure) {
-                    const icon = self.getIcon(val.is_dir, val.name);
                     try term.writer.print("  ", .{});
 
+                    // Print git status if loaded
+                    if (self.loaded_git) {
+                        const git_char = self.getGitStatusChar(val.name);
+                        if (git_char) |ch| {
+                            try term.setColor(self.getGitStatusColor(val.name));
+                            try term.writer.print("{c} ", .{ch});
+                            try term.setColor(Terminal.Color.reset);
+                        } else {
+                            try term.writer.print("  ", .{});
+                        }
+                    }
+
+                    const icon = self.getIcon(val.is_dir, val.name);
                     try term.setColor(self.getColor(val.is_dir, val.name));
                     try term.writer.print("{s} {s}", .{ icon, val.name });
                     try term.setColor(Terminal.Color.reset);
@@ -313,6 +334,32 @@ pub const Files = struct {
 
         // default file color
         return Terminal.Color.bright_yellow;
+    }
+
+    inline fn getGitStatusChar(self: Self, name: []const u8) ?u8 {
+        const status = self.git_inventory.get(name) orelse return null;
+        return switch (status) {
+            .modified => 'M',
+            .added => 'A',
+            .deleted => 'D',
+            .renamed => 'R',
+            .untracked => '?',
+            .unmerged => 'U',
+            .none => null,
+        };
+    }
+
+    inline fn getGitStatusColor(self: Self, name: []const u8) Terminal.Color {
+        const status = self.git_inventory.get(name) orelse return Terminal.Color.reset;
+        return switch (status) {
+            .modified => Terminal.Color.bright_yellow,
+            .added => Terminal.Color.bright_green,
+            .deleted => Terminal.Color.bright_red,
+            .renamed => Terminal.Color.bright_blue,
+            .untracked => Terminal.Color.bright_black,
+            .unmerged => Terminal.Color.bright_red,
+            .none => Terminal.Color.reset,
+        };
     }
 
     /// list files in detail mode
