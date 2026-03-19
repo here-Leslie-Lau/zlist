@@ -74,9 +74,8 @@ pub const Files = struct {
 
         // we need to load stat
         // if show_detail is true or sort by mtime or size.
-        // but if git integration is enabled, we can skip loading stat.
         // otherwise we can skip loading stat to improve performance.
-        const load_stat = ((opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size) and !opt.show_git);
+        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size);
 
         // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
@@ -368,34 +367,54 @@ pub const Files = struct {
         var size_buf: [32]u8 = undefined;
         var time_buf: [32]u8 = undefined;
 
+        const show_git = self.loaded_git and !mode_opt.pure;
+
         for (self.items.items) |val| {
             if (!mode_opt.pure) {
-                // first, set color
                 try term.setColor(self.getColor(val.is_dir, val.name));
+            }
 
-                try term.writer.print(comptime opts.PrintMode.Detail.toString(), .{
+            if (show_git) {
+                const git_char = self.getGitStatusChar(val.name) orelse ' ';
+                const git_color = self.getGitStatusColor(val.name);
+
+                try term.setColor(git_color);
+                const icon = self.getIcon(val.is_dir, val.name);
+                try term.writer.print(comptime opts.PrintMode.DetailWithGit.toString(), .{
+                    git_char,
                     val.getPermissions(&perm_buf),
                     val.username,
                     val.groupname,
                     try val.humanSize(&size_buf),
                     try val.formatTime(&time_buf),
-                    self.getIcon(val.is_dir, val.name),
+                    icon,
                     val.name,
                 });
             } else {
-                // pure mode, no color and no icon
-                try term.writer.print(comptime opts.PrintMode.DetailPure.toString(), .{
-                    val.getPermissions(&perm_buf),
-                    val.username,
-                    val.groupname,
-                    try val.humanSize(&size_buf),
-                    try val.formatTime(&time_buf),
-                    val.name,
-                });
+                if (mode_opt.pure) {
+                    try term.writer.print(comptime opts.PrintMode.DetailPure.toString(), .{
+                        val.getPermissions(&perm_buf),
+                        val.username,
+                        val.groupname,
+                        try val.humanSize(&size_buf),
+                        try val.formatTime(&time_buf),
+                        val.name,
+                    });
+                } else {
+                    const icon = self.getIcon(val.is_dir, val.name);
+                    try term.writer.print(comptime opts.PrintMode.Detail.toString(), .{
+                        val.getPermissions(&perm_buf),
+                        val.username,
+                        val.groupname,
+                        try val.humanSize(&size_buf),
+                        try val.formatTime(&time_buf),
+                        icon,
+                        val.name,
+                    });
+                }
             }
 
             if (!mode_opt.pure) {
-                // reset color
                 try term.setColor(Terminal.Color.reset);
             }
             try term.writer.print("\n", .{});
