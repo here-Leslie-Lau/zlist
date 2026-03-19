@@ -24,11 +24,13 @@ While it's a learning project, it still packs some handy features:
 *   **Dig Deeper**: A basic `-r` flag to peek into subdirectories, Or `-L` to control how deep you want to go.
 *   **Filters**: Quickly isolate just directories (`-d`) or just files (`-D`).
 *   **Summary Report**: Use `-R` to see a quick count of files and folders after listing.
+*   **Git Integration**: Use `-g` with `-l` to show Git status indicators in detailed view (`M` modified, `A` added, `D` deleted, `R` renamed, `?` untracked). Note: Git status only works in detailed mode (`-l`), not in grid mode.
 
 ## 📸 Preview
 
 ![Preview1](pics/screenshot.png)
 ![Preview2](pics/screenshot2.png)
+![Preview3](pics/screenshot3.png)
 
 *(Make sure you have a [Nerd Font](https://www.nerdfonts.com/) installed in your terminal to see the icons!)*
 
@@ -75,6 +77,7 @@ zl [OPTIONS] [PATH]
 | `-d`, `--dir` | Only show directories. |
 | `-D`, `--no_dir` | Only show files (exclude directories). |
 | `-R`, `--report` | Show a brief summary of file and folder counts. |
+| `-g`, `--git` | Show Git status indicators (requires `-l` to work). |
 | `-h`, `--help` | Print help message. |
 
 ### Examples
@@ -114,6 +117,11 @@ zl -D
 zl -R
 ```
 
+**Show Git status (must be used with `-l` for detailed view):**
+```bash
+zl -lg
+```
+
 ## 🛣 Roadmap
 
 *   [x] Basic file listing & recursion
@@ -126,6 +134,7 @@ zl -R
 *   [x] Filter by files or directories (`-d`, `-D`)
 *   [x] Smart dynamic grid layout
 *   [x] Summary report (`-R`)
+*   [x] Git status integration (`-g`)
 *   [ ] Multi-threading for faster `stat` calls
 *   [ ] Custom color/icon configurations (Maybe, if you need it)
 
