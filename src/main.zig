@@ -4,8 +4,7 @@ const clap = @import("clap");
 const fs = @import("files.zig");
 const opts = @import("opts.zig");
 
-var threaded: std.Io.Threaded = .init_single_threaded;
-const io = threaded.io();
+var threaded: std.Io.Threaded = undefined;
 
 const params_desc: []const u8 = blk: {
     break :blk
@@ -19,6 +18,7 @@ const params_desc: []const u8 = blk: {
     \\-R, --report              Shows brief report about number of files and folders shown.
     \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
     \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
+    \\-g, --git                 Show git status of files.
     \\<str>...
     \\
     ;
@@ -26,9 +26,15 @@ const params_desc: []const u8 = blk: {
 
 pub fn main(init: std.process.Init.Minimal) !void {
     // get allocator (c_allocator and arena allocator)
-    var arena_impl = std.heap.ArenaAllocator.init(std.heap.c_allocator);
+    const c_allocator = std.heap.c_allocator;
+    var arena_impl = std.heap.ArenaAllocator.init(c_allocator);
     defer arena_impl.deinit();
     const allocator = arena_impl.allocator();
+
+    // get io
+    threaded = std.Io.Threaded.init(c_allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
 
     // parsers
     const parsers = comptime .{
@@ -58,6 +64,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var only_file: bool = false;
     var recursive: bool = false;
     var recursion_level: i8 = 0; // 0 means infinite
+    var git: bool = false;
 
     var path: []const u8 = ".";
 
@@ -98,16 +105,23 @@ pub fn main(init: std.process.Init.Minimal) !void {
         only_dir = false;
         only_file = false;
     }
+    if (res.args.git != 0) {
+        git = true;
+    }
     if (res.args.recursive != 0) {
         // set recursive mode
         recursive = true;
         // no necessity to show detail in recursive mode
         show_detail = false;
+        // git status is not shown in recursive mode
+        git = false;
     }
     if (res.args.level) |level| {
         // set recursive mode and recursion level
         recursive = true;
         recursion_level = level;
+        show_detail = false;
+        git = false;
     }
 
     // get file path from args
@@ -123,7 +137,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         allocator,
         io,
         dir,
-        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .path = path },
+        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .show_git = git, .path = path },
     );
     defer files.deinit();
 

@@ -82,10 +82,11 @@ pub inline fn getFileStatuses(allocator: std.mem.Allocator, io: std.Io, path: []
         const x = line[0];
         const y = line[1];
         const filename = std.mem.trim(u8, line[3..], " \t");
+        const basename = std.fs.path.basename(filename);
 
         const status = parseStatusCode(x, y);
         if (status != .none) {
-            const name_cp = try allocator.dupe(u8, filename);
+            const name_cp = try allocator.dupe(u8, basename);
             try m.put(name_cp, status);
         }
     }
