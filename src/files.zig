@@ -218,9 +218,7 @@ pub const Files = struct {
 
                     const item = self.items.items[idx];
                     // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) + 1 space = 5.
-                    // git mode adds 2 more (git char + 1 space).
-                    const git_extra: usize = if (self.loaded_git and !mode_opt.pure) 2 else 0;
-                    const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5 + git_extra;
+                    const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5;
 
                     if (item_len > col_widths[c]) {
                         col_widths[c] = item_len;
@@ -247,8 +245,7 @@ pub const Files = struct {
 
         if (optimal_cols == 1) {
             optimal_rows = total_items;
-            const git_extra: usize = if (self.loaded_git and !mode_opt.pure) 2 else 0;
-            final_col_widths[0] = self.max_display_len + (if (mode_opt.pure) 2 else 5 + git_extra);
+            final_col_widths[0] = self.max_display_len + (if (mode_opt.pure) 2 else 5);
         }
 
         for (0..optimal_rows) |r| {
@@ -257,26 +254,13 @@ pub const Files = struct {
                 if (idx >= total_items) continue;
 
                 const val = self.items.items[idx];
-                const git_extra: usize = if (self.loaded_git and !mode_opt.pure) 2 else 0;
-                const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5 + git_extra;
+                const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5;
 
                 // Print prefix, icon and name
                 if (!mode_opt.pure) {
+                    const icon = self.getIcon(val.is_dir, val.name);
                     try term.writer.print("  ", .{});
 
-                    // Print git status if loaded
-                    if (self.loaded_git) {
-                        const git_char = self.getGitStatusChar(val.name);
-                        if (git_char) |ch| {
-                            try term.setColor(self.getGitStatusColor(val.name));
-                            try term.writer.print("{c} ", .{ch});
-                            try term.setColor(Terminal.Color.reset);
-                        } else {
-                            try term.writer.print("  ", .{});
-                        }
-                    }
-
-                    const icon = self.getIcon(val.is_dir, val.name);
                     try term.setColor(self.getColor(val.is_dir, val.name));
                     try term.writer.print("{s} {s}", .{ icon, val.name });
                     try term.setColor(Terminal.Color.reset);

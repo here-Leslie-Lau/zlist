@@ -18,7 +18,7 @@ const params_desc: []const u8 = blk: {
     \\-R, --report              Shows brief report about number of files and folders shown.
     \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
     \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
-    \\-g, --git                 Show git status of files.
+    \\-g, --git                 Show git status of files. Only effective when in long format.
     \\<str>...
     \\
     ;
@@ -77,6 +77,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
     if (res.args.long != 0) {
         // set long listing mode
         show_detail = true;
+        if (res.args.git != 0) {
+            git = true;
+        }
     }
     if (res.args.a != 0) {
         // show hidden files
@@ -104,9 +107,6 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // if both -d and -D are set, neither is effective
         only_dir = false;
         only_file = false;
-    }
-    if (res.args.git != 0) {
-        git = true;
     }
     if (res.args.recursive != 0) {
         // set recursive mode
