@@ -51,6 +51,15 @@ pub const File = struct {
         if (opt.only_file and is_dir) {
             return null;
         }
+        if (opt.exts) |exts| {
+            for (exts) |ext| {
+                const file_ext = std.fs.path.extension(ext);
+                if (std.mem.eql(u8, file_ext, entry.name)) {
+                    // filter by extension
+                    return null;
+                }
+            }
+        }
 
         var file: Self = .{
             .is_hidden = is_hidden,

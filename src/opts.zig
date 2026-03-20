@@ -59,6 +59,9 @@ pub const FilesOptions = struct {
     show_git: bool = false,
     /// path from args
     path: []const u8 = ".",
+    /// To filter files by extension, only show files with the specified extensions.
+    /// Default is null, which means no filtering.
+    exts: ?[]const []const u8 = null,
 };
 
 pub const FileOptions = struct {
@@ -70,6 +73,7 @@ pub const FileOptions = struct {
     only_dir: bool = false,
     /// only show files, not directories
     only_file: bool = false,
+    exts: ?[]const []const u8 = null,
 };
 
 /// The options of `zl` that are determined at compile time.
