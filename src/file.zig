@@ -51,11 +51,9 @@ pub const File = struct {
         if (opt.only_file and is_dir) {
             return null;
         }
-        if (opt.exts) |exts| {
-            for (exts) |ext| {
-                const file_ext = std.fs.path.extension(ext);
-                if (std.mem.eql(u8, file_ext, entry.name)) {
-                    // filter by extension
+        if (!is_dir) {
+            if (opt.exts) |exts| {
+                if (shouldFilterByExt(entry.name, exts)) {
                     return null;
                 }
             }
@@ -82,6 +80,20 @@ pub const File = struct {
         }
 
         return file;
+    }
+
+    inline fn shouldFilterByExt(name: []const u8, exts: []const []const u8) bool {
+        const file_ext = std.fs.path.extension(name);
+        const file_ext_no_dot = if (file_ext.len > 0) file_ext[1..] else "";
+
+        for (exts) |ext| {
+            const ext_no_dot = if (ext.len > 0 and ext[0] == '.') ext[1..] else ext;
+            if (std.ascii.eqlIgnoreCase(file_ext_no_dot, ext_no_dot)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     pub fn nameLessThan(_: void, lhs: Self, rhs: Self) bool {

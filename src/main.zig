@@ -19,6 +19,7 @@ const params_desc: []const u8 = blk: {
     \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
     \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
     \\-g, --git                 Show git status of files. Only effective when in long format.
+    \\-e, --ext <str>...        Filter by extension (e.g. --ext zig,md,ts).
     \\<str>...
     \\
     ;
@@ -45,7 +46,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     // parse command line arguments
     const params = comptime clap.parseParamsComptime(params_desc);
-    var res = try clap.parse(
+    const res = try clap.parse(
         clap.Help,
         &params,
         parsers,
@@ -65,6 +66,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var recursive: bool = false;
     var recursion_level: i8 = 0; // 0 means infinite
     var git: bool = false;
+    var exts: ?[]const []const u8 = null;
+
+    var ext_list = try std.ArrayList([]const u8).initCapacity(allocator, 0);
 
     var path: []const u8 = ".";
 
@@ -123,6 +127,23 @@ pub fn main(init: std.process.Init.Minimal) !void {
         show_detail = false;
         git = false;
     }
+    if (res.args.ext.len > 0) {
+        const ext_args = res.args.ext;
+        for (ext_args) |arg| {
+            var token_it = std.mem.splitScalar(u8, arg, ',');
+            while (token_it.next()) |token| {
+                const trimmed = std.mem.trim(u8, token, " \t\r\n");
+                if (trimmed.len == 0) {
+                    continue;
+                }
+
+                try ext_list.append(allocator, trimmed);
+            }
+        }
+        if (ext_list.items.len > 0) {
+            exts = ext_list.items;
+        }
+    }
 
     // get file path from args
     if (res.positionals[0].len > 0) {
@@ -137,7 +158,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         allocator,
         io,
         dir,
-        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .show_git = git, .path = path },
+        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .show_git = git, .path = path, .exts = exts },
     );
     defer files.deinit();
 
