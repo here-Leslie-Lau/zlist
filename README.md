@@ -6,25 +6,26 @@
 [![Zig Version](https://img.shields.io/badge/zig-0.16.0_dev-orange?style=flat-square)](https://ziglang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**Note**: This is my **first CLI tool written in Zig**! 🚀
+**Note**: This is my **first CLI tool in Zig**! 🚀
 
-I built this project to learn the language, understand manual memory management, and explore the standard library. It may not be the fastest or smallest `ls` clone out there (yet!), but it's a functional experiment and a work in progress.
+I built this project to learn Zig, get comfortable with manual memory management, and explore the standard library. It might not be the fastest or smallest `ls` clone (yet), but it's usable today and still getting better.
 
 ## ✨ Features
 
-While it's a learning project, it still packs some handy features:
+Even as a learning project, it already has some pretty handy features:
 
-*   **Smart Grid Layout**: Dynamically adjusts column widths to keep the output compact and readable, saving screen space.
+*   **Smart Grid Layout**: Automatically adjusts column widths so things stay compact and easy to scan.
 *   **Visual Context**:
     *   **Nerd Fonts** support out of the box.
     *   Specific icons for your code (`Zig`, `Rust`, `Go`, `Python`, `JS/TS`, `C/C++`, etc.).
     *   Highlights directories and Markdown files so you spot them instantly.
-*   **Smart Details**: Permissions, user/group, sizes, and timestamps formatted to be actually readable.
-*   **Sorting**: Default sorting is A-Z (name), with options for **filename length**, **directories first**, **modification time** (newest first), or **file size** (largest first).
-*   **Dig Deeper**: A basic `-r` flag to peek into subdirectories, Or `-L` to control how deep you want to go.
+*   **Smart Details**: Permissions, user/group, sizes, and timestamps in a format that's actually readable.
+*   **Sorting**: Default is A-Z by name, plus options for **filename length**, **directories first**, **modification time** (newest first), and **file size** (largest first).
+*   **Dig Deeper**: Use `-r` to recurse into subdirectories, or `-L` to cap the depth.
 *   **Filters**: Quickly isolate just directories (`-d`) or just files (`-D`).
+*   **Extension Filter**: Hide extensions you don't want to see with `-e` / `--ext` (for example: `--ext zig,md,ts`).
 *   **Summary Report**: Use `-R` to see a quick count of files and folders after listing.
-*   **Git Integration**: Use `-g` with `-l` to show Git status indicators in detailed view (`M` modified, `A` added, `D` deleted, `R` renamed, `?` untracked). Note: Git status only works in detailed mode (`-l`), not in grid mode.
+*   **Git Integration**: Use `-g` with `-l` to show Git status indicators in detailed view (`M` modified, `A` added, `D` deleted, `R` renamed, `?` untracked). Note: this only works in detailed mode (`-l`), not in grid mode.
 
 ## 📸 Preview
 
@@ -60,7 +61,7 @@ zig build -Doptimize=ReleaseFast
 
 ## 🛠 Usage
 
-Simple and intuitive.
+Just run:
 
 ```bash
 zl [OPTIONS] [PATH]
@@ -68,14 +69,15 @@ zl [OPTIONS] [PATH]
 
 | Flag | Description |
 | :--- | :--- |
-| `-l`, `--long` | Enable detailed view (permissions, size, date, user). |
+| `-l`, `--long` | Show detailed view (permissions, size, date, user). |
 | `-a`, `--a` | Show hidden files (starting with `.`). |
 | `-s`, `--sort <mode>` | `name` (A-Z) [Default]<br>`length` (Shortest first)<br>`dir_first` (Dirs first)<br>`mtime` (Newest first)<br>`size` (Largest first) |
-| `-r`, `--recursive` | Recursively list subdirectories encountered. |
+| `-r`, `--recursive` | Recurse into subdirectories. |
 | `-L`, `--level <INT>` | Limit the depth of recursion (use `0` for infinite depth). |
 | `-p`, `--pure` | Clean output without colors or icons (useful for pipes). |
 | `-d`, `--dir` | Only show directories. |
-| `-D`, `--no_dir` | Only show files (exclude directories). |
+| `-D`, `--no_dir` | Only show files (hide directories). |
+| `-e`, `--ext <str>...` | Hide files by extension. Comma-separated is supported, e.g. `--ext zig,go,ts`. |
 | `-R`, `--report` | Show a brief summary of file and folder counts. |
 | `-g`, `--git` | Show Git status indicators (requires `-l` to work). |
 | `-h`, `--help` | Print help message. |
@@ -87,12 +89,12 @@ zl [OPTIONS] [PATH]
 zl
 ```
 
-**Show everything with details (Sorted by filename length):**
+**Show all files with details (sorted by filename length):**
 ```bash
 zl -la -s length
 ```
 
-**Dig deep (Recursive listing):**
+**Dig deep (recursive listing):**
 ```bash
 # Basic recursive (infinite)
 zl -r
@@ -101,15 +103,24 @@ zl -r
 zl -L 2
 ```
 
-**Clean output (No colors/icons):**
+**Clean output (no colors/icons):**
 ```bash
 zl -p
 ```
 
-**Filter by file type (Directories only / Files only):**
+**Filter by file type (directories only / files only):**
 ```bash
 zl -d
 zl -D
+```
+
+**Exclude some extensions:**
+```bash
+# hide zig/go/ts files
+zl --ext zig,go,ts
+
+# same thing, with repeated flags
+zl -e zig,go -e ts
 ```
 
 **Show summary report:**
@@ -117,7 +128,7 @@ zl -D
 zl -R
 ```
 
-**Show Git status (must be used with `-l` for detailed view):**
+**Show Git status (must be used with `-l`):**
 ```bash
 zl -lg
 ```
@@ -140,7 +151,7 @@ zl -lg
 
 ## 🤝 Contributing
 
-Got an idea? Found a bug? Feel free to open an issue or drop a PR. This is a fun side project, and all contributions are welcome.
+Got an idea? Found a bug? Open an issue or send a PR. This is a fun side project, and contributions are always welcome.
 
 1.  Fork it
 2.  Create your feature branch (`git checkout -b feature/cool-thing`)
