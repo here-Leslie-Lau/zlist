@@ -24,6 +24,7 @@ Even as a learning project, it already has some pretty handy features:
 *   **Dig Deeper**: Use `-r` to recurse into subdirectories, or `-L` to cap the depth.
 *   **Filters**: Quickly isolate just directories (`-d`) or just files (`-D`).
 *   **Extension Filter**: Hide extensions you don't want to see with `-e` / `--ext` (for example: `--ext zig,md,ts`).
+*   **Name Match Filter**: Only show entries whose names contain specific text with `-m` / `--match` (for example: `--match test`).
 *   **Summary Report**: Use `-R` to see a quick count of files and folders after listing.
 *   **Git Integration**: Use `-g` with `-l` to show Git status indicators in detailed view (`M` modified, `A` added, `D` deleted, `R` renamed, `?` untracked). Note: this only works in detailed mode (`-l`), not in grid mode.
 
@@ -77,7 +78,8 @@ zl [OPTIONS] [PATH]
 | `-p`, `--pure` | Clean output without colors or icons (useful for pipes). |
 | `-d`, `--dir` | Only show directories. |
 | `-D`, `--no_dir` | Only show files (hide directories). |
-| `-e`, `--ext <str>...` | Hide files by extension. Comma-separated is supported, e.g. `--ext zig,go,ts`. |
+| `-e`, `--ext <str>...` | Hide files by extension, e.g. `--ext zig,go,ts`. |
+| `-m`, `--match <str>...` | Only show names that contain the given text, e.g. `--match test`. |
 | `-R`, `--report` | Show a brief summary of file and folder counts. |
 | `-g`, `--git` | Show Git status indicators (requires `-l` to work). |
 | `-h`, `--help` | Print help message. |
@@ -116,11 +118,12 @@ zl -D
 
 **Exclude some extensions:**
 ```bash
-# hide zig/go/ts files
 zl --ext zig,go,ts
+```
 
-# same thing, with repeated flags
-zl -e zig,go -e ts
+**Match by name:**
+```bash
+zl --match test
 ```
 
 **Show summary report:**
@@ -143,6 +146,8 @@ zl -lg
 *   [x] Depth control for recursion (`-L`)
 *   [x] Clean output mode (`-p`)
 *   [x] Filter by files or directories (`-d`, `-D`)
+*   [x] Extension filter (`-e`, `--ext`)
+*   [x] Name match filter (`-m`, `--match`)
 *   [x] Smart dynamic grid layout
 *   [x] Summary report (`-R`)
 *   [x] Git status integration (`-g`)
