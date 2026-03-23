@@ -103,7 +103,8 @@ pub const File = struct {
 
     inline fn shouldIncludeByName(name: []const u8, matches: []const []const u8) bool {
         for (matches) |m| {
-            if (std.ascii.eqlIgnoreCase(name, m)) {
+            // check if name contains m as a substring, ignoring case
+            if (std.ascii.findIgnoreCase(name, m) != null) {
                 return true;
             }
         }

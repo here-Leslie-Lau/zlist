@@ -20,6 +20,7 @@ const params_desc: []const u8 = blk: {
     \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
     \\-g, --git                 Show git status of files. Only effective when in long format.
     \\-e, --ext <str>...        Filter by extension (e.g. --ext zig,md,ts).
+    \\-m, --match <str>...      Match file names/subtring (e.g. --match main,readme).
     \\<str>...
     \\
     ;
@@ -67,8 +68,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var recursion_level: i8 = 0; // 0 means infinite
     var git: bool = false;
     var exts: ?[]const []const u8 = null;
+    var matches: ?[]const []const u8 = null;
 
     var ext_list = try std.ArrayList([]const u8).initCapacity(allocator, 0);
+    var match_list = try std.ArrayList([]const u8).initCapacity(allocator, 0);
 
     var path: []const u8 = ".";
 
@@ -144,6 +147,23 @@ pub fn main(init: std.process.Init.Minimal) !void {
             exts = ext_list.items;
         }
     }
+    if (res.args.match.len > 0) {
+        const match_args = res.args.match;
+        for (match_args) |arg| {
+            var token_it = std.mem.splitScalar(u8, arg, ',');
+            while (token_it.next()) |token| {
+                const trimmed = std.mem.trim(u8, token, " \t\r\n");
+                if (trimmed.len == 0) {
+                    continue;
+                }
+
+                try match_list.append(allocator, trimmed);
+            }
+        }
+        if (match_list.items.len > 0) {
+            matches = match_list.items;
+        }
+    }
 
     // get file path from args
     if (res.positionals[0].len > 0) {
@@ -158,7 +178,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         allocator,
         io,
         dir,
-        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .show_git = git, .path = path, .exts = exts },
+        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .show_git = git, .path = path, .exts = exts, .matches = matches },
     );
     defer files.deinit();
 

@@ -90,7 +90,7 @@ pub const Files = struct {
             var fs = (try file.File.init(
                 &entry,
                 &dir,
-                .{ .load_stat = load_stat, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file, .exts = opt.exts },
+                .{ .load_stat = load_stat, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file, .exts = opt.exts, .matches = opt.matches },
                 &username_inventory,
                 &groupname_inventory,
             )) orelse continue;
