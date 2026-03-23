@@ -62,6 +62,8 @@ pub const FilesOptions = struct {
     /// To filter files by extension, only show files with the specified extensions.
     /// Default is null, which means no filtering.
     exts: ?[]const []const u8 = null,
+    /// To match files by name, only show files that match the specified patterns.
+    matches: ?[]const []const u8 = null,
 };
 
 pub const FileOptions = struct {
@@ -74,6 +76,7 @@ pub const FileOptions = struct {
     /// only show files, not directories
     only_file: bool = false,
     exts: ?[]const []const u8 = null,
+    matches: ?[]const []const u8 = null,
 };
 
 /// The options of `zl` that are determined at compile time.

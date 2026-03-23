@@ -58,6 +58,11 @@ pub const File = struct {
                 }
             }
         }
+        if (opt.matches) |matches| {
+            if (!shouldIncludeByName(entry.name, matches)) {
+                return null;
+            }
+        }
 
         var file: Self = .{
             .is_hidden = is_hidden,
@@ -93,6 +98,15 @@ pub const File = struct {
             }
         }
 
+        return false;
+    }
+
+    inline fn shouldIncludeByName(name: []const u8, matches: []const []const u8) bool {
+        for (matches) |m| {
+            if (std.ascii.eqlIgnoreCase(name, m)) {
+                return true;
+            }
+        }
         return false;
     }
 
