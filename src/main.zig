@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const clap = @import("clap");
+const cli_args = @import("cli_args.zig");
 const fs = @import("files.zig");
 const opts = @import("opts.zig");
 
@@ -57,128 +58,22 @@ pub fn main(init: std.process.Init.Minimal) !void {
         },
     );
 
-    var show_hidden: bool = false;
-    var show_detail: bool = false;
-    var pure: bool = false;
-    var report: bool = false;
-    var sort_type: opts.SortType = .name;
-    var only_dir: bool = false;
-    var only_file: bool = false;
-    var recursive: bool = false;
-    var recursion_level: i8 = 0; // 0 means infinite
-    var git: bool = false;
-    var exts: ?[]const []const u8 = null;
-    var matches: ?[]const []const u8 = null;
-
-    var ext_list = try std.ArrayList([]const u8).initCapacity(allocator, 0);
-    var match_list = try std.ArrayList([]const u8).initCapacity(allocator, 0);
-
-    var path: []const u8 = ".";
-
-    // process parsed args
     if (res.args.help != 0) {
         // show hellp msg
         std.debug.print("{s}\n", .{params_desc});
         return;
     }
-    if (res.args.long != 0) {
-        // set long listing mode
-        show_detail = true;
-        if (res.args.git != 0) {
-            git = true;
-        }
-    }
-    if (res.args.a != 0) {
-        // show hidden files
-        show_hidden = true;
-    }
-    // set sort type
-    if (res.args.sort) |sort| {
-        sort_type = sort;
-    }
-    // set pure mode
-    if (res.args.pure != 0) {
-        pure = true;
-    }
-    if (res.args.report != 0) {
-        report = true;
-    }
-    // only show directories or files
-    if (res.args.dir != 0) {
-        only_dir = true;
-    }
-    if (res.args.no_dir != 0) {
-        only_file = true;
-    }
-    if (only_dir and only_file) {
-        // if both -d and -D are set, neither is effective
-        only_dir = false;
-        only_file = false;
-    }
-    if (res.args.recursive != 0) {
-        // set recursive mode
-        recursive = true;
-        // no necessity to show detail in recursive mode
-        show_detail = false;
-        // git status is not shown in recursive mode
-        git = false;
-    }
-    if (res.args.level) |level| {
-        // set recursive mode and recursion level
-        recursive = true;
-        recursion_level = level;
-        show_detail = false;
-        git = false;
-    }
-    if (res.args.ext.len > 0) {
-        const ext_args = res.args.ext;
-        for (ext_args) |arg| {
-            var token_it = std.mem.splitScalar(u8, arg, ',');
-            while (token_it.next()) |token| {
-                const trimmed = std.mem.trim(u8, token, " \t\r\n");
-                if (trimmed.len == 0) {
-                    continue;
-                }
-
-                try ext_list.append(allocator, trimmed);
-            }
-        }
-        if (ext_list.items.len > 0) {
-            exts = ext_list.items;
-        }
-    }
-    if (res.args.match.len > 0) {
-        const match_args = res.args.match;
-        for (match_args) |arg| {
-            var token_it = std.mem.splitScalar(u8, arg, ',');
-            while (token_it.next()) |token| {
-                const trimmed = std.mem.trim(u8, token, " \t\r\n");
-                if (trimmed.len == 0) {
-                    continue;
-                }
-
-                try match_list.append(allocator, trimmed);
-            }
-        }
-        if (match_list.items.len > 0) {
-            matches = match_list.items;
-        }
-    }
-
-    // get file path from args
-    if (res.positionals[0].len > 0) {
-        path = res.positionals[0][0];
-    }
+    const cli = try cli_args.parseCliConfig(allocator, res);
 
     const cwd = std.Io.Dir.cwd();
-    const dir = try cwd.openDir(io, path, .{ .iterate = true });
+    const dir = try cwd.openDir(io, cli.path, .{ .iterate = true });
     defer dir.close(io);
 
     var files = try fs.Files.init(
         allocator,
         io,
         dir,
-        .{ .show_detail = show_detail, .show_hidden = show_hidden, .sort_type = sort_type, .recursive = recursive, .pure = pure, .only_dir = only_dir, .only_file = only_file, .recursion_level = recursion_level, .report = report, .show_git = git, .path = path, .exts = exts, .matches = matches },
+        cli.opt,
     );
     defer files.deinit();
 
@@ -202,30 +97,30 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // get term
     const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
-    if (show_detail) {
+    if (cli.opt.show_detail) {
         // zl -l
-        switch (pure) {
+        switch (cli.opt.pure) {
             // pure mode
             true => try files.listDetail(term, .{ .pure = true }),
             false => try files.listDetail(term, .{ .pure = false }),
         }
-    } else if (recursive) {
+    } else if (cli.opt.recursive) {
         // zl -r
-        switch (pure) {
+        switch (cli.opt.pure) {
             // pure mode
             true => try files.listRecursive(term, "", true, dir, .{ .pure = true }),
             false => try files.listRecursive(term, "", true, dir, .{ .pure = false }),
         }
     } else {
         // just ls command
-        switch (pure) {
+        switch (cli.opt.pure) {
             // pure mode
             true => try files.list(term, stdout_file.handle, .{ .pure = true }),
             false => try files.list(term, stdout_file.handle, .{ .pure = false }),
         }
     }
 
-    if (report) {
+    if (cli.opt.report) {
         try files.printReport(&stdout_writer.interface);
     }
 
