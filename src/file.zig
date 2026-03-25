@@ -80,7 +80,11 @@ pub const File = struct {
             // read more file details
             file.stat_t = file.getStat(dir);
 
-            if (builtin.os.tag != .windows) {
+            if (shouldFilterByChangedWithin(file.stat_t, is_dir, opt)) {
+                return null;
+            }
+
+            if (opt.load_owner and builtin.os.tag != .windows) {
                 file.username = file.getName(.User, username_inventory, groupname_inventory) orelse "UNKNOWN";
                 file.groupname = file.getName(.Group, username_inventory, groupname_inventory) orelse "UNKNOWN";
             }
@@ -111,6 +115,18 @@ pub const File = struct {
             }
         }
         return false;
+    }
+
+    inline fn shouldFilterByChangedWithin(stat_t: ?Stat, is_dir: bool, opt: opts.FileOptions) bool {
+        const max_age = opt.changed_within orelse return false;
+        if (is_dir and opt.keep_dirs_for_changed_within) {
+            return false;
+        }
+
+        const stat = stat_t orelse return true;
+        const now = opt.changed_within_now orelse return false;
+        const age = stat.mtime.durationTo(now);
+        return age.nanoseconds > max_age.nanoseconds;
     }
 
     pub fn nameLessThan(_: void, lhs: Self, rhs: Self) bool {

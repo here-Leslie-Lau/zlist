@@ -73,14 +73,18 @@ pub const Files = struct {
         var total_files: usize = 0;
 
         // we need to load stat
-        // if show_detail is true or sort by mtime or size.
+        // if show_detail is true, sort by mtime/size, or changed-within is enabled.
         // otherwise we can skip loading stat to improve performance.
-        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size);
+        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size or opt.changed_within != null);
+        const changed_within_now = if (opt.changed_within != null)
+            std.Io.Timestamp.now(io, .real)
+        else
+            null;
 
         // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
-        var groupname_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
-        if (load_stat) {
+        var groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8) = undefined;
+        if (opt.show_detail) {
             username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
             groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
         }
@@ -90,7 +94,19 @@ pub const Files = struct {
             var fs = (try file.File.init(
                 &entry,
                 &dir,
-                .{ .load_stat = load_stat, .show_hidden = opt.show_hidden, .only_dir = opt.only_dir, .only_file = opt.only_file, .keep_dirs_for_match = opt.recursive, .exts = opt.exts, .matches = opt.matches },
+                .{
+                    .load_stat = load_stat,
+                    .load_owner = opt.show_detail,
+                    .show_hidden = opt.show_hidden,
+                    .only_dir = opt.only_dir,
+                    .only_file = opt.only_file,
+                    .keep_dirs_for_match = opt.recursive,
+                    .keep_dirs_for_changed_within = opt.recursive,
+                    .exts = opt.exts,
+                    .matches = opt.matches,
+                    .changed_within = opt.changed_within,
+                    .changed_within_now = changed_within_now,
+                },
                 &username_inventory,
                 &groupname_inventory,
             )) orelse continue;
