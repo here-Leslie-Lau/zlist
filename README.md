@@ -25,6 +25,7 @@ Even as a learning project, it already has some pretty handy features:
 *   **Filters**: Quickly isolate just directories (`-d`) or just files (`-D`).
 *   **Extension Filter**: Hide extensions you don't want to see with `-e` / `--ext` (for example: `--ext zig,md,ts`).
 *   **Name Match Filter**: Only show entries whose names contain specific text with `-m` / `--match` (for example: `--match test`).
+*   **Modified Time Filter**: Show only recently changed entries with `--changed-within` (for example: `--changed-within 7d`).
 *   **Summary Report**: Use `-R` to see a quick count of files and folders after listing.
 *   **Git Integration**: Use `-g` with `-l` to show Git status indicators in detailed view (`M` modified, `A` added, `D` deleted, `R` renamed, `?` untracked). Note: this only works in detailed mode (`-l`), not in grid mode.
 
@@ -80,6 +81,7 @@ zl [OPTIONS] [PATH]
 | `-D`, `--no_dir` | Only show files (hide directories). |
 | `-e`, `--ext <str>...` | Hide files by extension, e.g. `--ext zig,go,ts`. |
 | `-m`, `--match <str>...` | Only show names that contain the given text, e.g. `--match test`. |
+| `--changed-within <str>` | Only show entries changed within a time range, e.g. `--changed-within 7d`. Supports `s`, `m`, `h`, `d`, `w`. |
 | `-R`, `--report` | Show a brief summary of file and folder counts. |
 | `-g`, `--git` | Show Git status indicators (requires `-l` to work). |
 | `-h`, `--help` | Print help message. |
@@ -124,6 +126,11 @@ zl --ext zig,go,ts
 **Match by name:**
 ```bash
 zl --match test
+```
+
+**Show files changed recently:**
+```bash
+zl --changed-within 7d
 ```
 
 **Show summary report:**
