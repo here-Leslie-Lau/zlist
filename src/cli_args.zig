@@ -63,6 +63,10 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
     opt.exts = try parseCsvArgs(allocator, res.args.ext);
     opt.matches = try parseCsvArgs(allocator, res.args.match);
 
+    if (res.args.@"changed-within") |value| {
+        opt.changed_within = try parseChangedWithin(value);
+    }
+
     if (res.positionals[0].len > 0) {
         path = res.positionals[0][0];
     }
@@ -71,6 +75,36 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
     return .{
         .opt = opt,
         .path = path,
+    };
+}
+
+const ParseChangedWithinError = error{
+    InvalidChangedWithin,
+};
+
+inline fn parseChangedWithin(value: []const u8) ParseChangedWithinError!std.Io.Duration {
+    const trimmed = std.mem.trim(u8, value, " \t\r\n");
+    if (trimmed.len < 2) {
+        return error.InvalidChangedWithin;
+    }
+
+    const unit = trimmed[trimmed.len - 1];
+    const number_text = trimmed[0 .. trimmed.len - 1];
+    const amount = std.fmt.parseInt(i64, number_text, 10) catch {
+        return error.InvalidChangedWithin;
+    };
+
+    if (amount < 0) {
+        return error.InvalidChangedWithin;
+    }
+
+    return switch (unit) {
+        's' => std.Io.Duration.fromSeconds(amount),
+        'm' => std.Io.Duration.fromSeconds(std.math.mul(i64, amount, 60) catch return error.InvalidChangedWithin),
+        'h' => std.Io.Duration.fromSeconds(std.math.mul(i64, amount, 60 * 60) catch return error.InvalidChangedWithin),
+        'd' => std.Io.Duration.fromSeconds(std.math.mul(i64, amount, 24 * 60 * 60) catch return error.InvalidChangedWithin),
+        'w' => std.Io.Duration.fromSeconds(std.math.mul(i64, amount, 7 * 24 * 60 * 60) catch return error.InvalidChangedWithin),
+        else => error.InvalidChangedWithin,
     };
 }
 

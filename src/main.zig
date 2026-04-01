@@ -9,19 +9,20 @@ var threaded: std.Io.Threaded = undefined;
 
 const params_desc: []const u8 = blk: {
     break :blk
-    \\-h, --help                Usage: zl [OPTIONS: -l -a -s=length ...] [Directory]
-    \\-l, --long                List files in the long format.
-    \\-a, --a                   Include directory entries whose names begin with a dot (‘.’).
-    \\-s, --sort <SORTTYPE>     Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc), dir_first(directories first), mtime(modification time desc), size(file size desc).
-    \\-r, --recursive           Recursively list subdirectories encountered. Equivalent to -L 0.
-    \\-L, --level <INT>         Limit the depth of recursion. 0 means infinite.
-    \\-p, --pure                Only show file names, without colors or other formatting.
-    \\-R, --report              Shows brief report about number of files and folders shown.
-    \\-d, --dir                 Only show directories, not files. When used in conjunction with -D, neither is effective.
-    \\-D, --no_dir              Only show files, not directories. When used in conjunction with -d, neither is effective.
-    \\-g, --git                 Show git status of files. Only effective when in long format.
-    \\-e, --ext <str>...        Filter by extension (e.g. --ext zig,md,ts).
-    \\-m, --match <str>...      Match file names/subtring (e.g. --match main,readme).
+    \\-h, --help                 Usage: zl [OPTIONS: -l -a -s=length ...] [Directory]
+    \\-l, --long                 List files in the long format.
+    \\-a, --a                    Include directory entries whose names begin with a dot (‘.’).
+    \\-s, --sort <SORTTYPE>      Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc), dir_first(directories first), mtime(modification time desc), size(file size desc).
+    \\    --changed-within <str> Only show entries modified within a time range (e.g. --changed-within 7d).
+    \\-r, --recursive            Recursively list subdirectories encountered. Equivalent to -L 0.
+    \\-L, --level <INT>          Limit the depth of recursion. 0 means infinite.
+    \\-p, --pure                 Only show file names, without colors or other formatting.
+    \\-R, --report               Shows brief report about number of files and folders shown.
+    \\-d, --dir                  Only show directories, not files. When used in conjunction with -D, neither is effective.
+    \\-D, --no_dir               Only show files, not directories. When used in conjunction with -d, neither is effective.
+    \\-g, --git                  Show git status of files. Only effective when in long format.
+    \\-e, --ext <str>...         Filter by extension (e.g. --ext zig,md,ts).
+    \\-m, --match <str>...       Match file names/subtring (e.g. --match main,readme).
     \\<str>...
     \\
     ;
