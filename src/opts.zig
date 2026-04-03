@@ -34,6 +34,13 @@ pub const SortType = enum {
     size,
 };
 
+pub const SizeRange = struct {
+    min_bytes: ?u64 = null,
+    min_inclusive: bool = true,
+    max_bytes: ?u64 = null,
+    max_inclusive: bool = true,
+};
+
 pub const FilesOptions = struct {
     /// show detail mode
     show_detail: bool = false,
@@ -66,6 +73,8 @@ pub const FilesOptions = struct {
     matches: ?[]const []const u8 = null,
     /// only show entries modified within this duration.
     changed_within: ?std.Io.Duration = null,
+    /// only show files whose size falls within this range.
+    size_range: ?SizeRange = null,
 };
 
 pub const FileOptions = struct {
@@ -83,10 +92,14 @@ pub const FileOptions = struct {
     keep_dirs_for_match: bool = false,
     /// when true, keep directories during `--changed-within` filtering so recursion can continue.
     keep_dirs_for_changed_within: bool = false,
+    /// when true, keep directories during `--size` filtering so recursion can continue.
+    keep_dirs_for_size: bool = false,
     exts: ?[]const []const u8 = null,
     matches: ?[]const []const u8 = null,
     /// only show entries modified within this duration.
     changed_within: ?std.Io.Duration = null,
+    /// only show files whose size falls within this range.
+    size_range: ?SizeRange = null,
     /// timestamp used as the "now" reference for changed-within filtering.
     changed_within_now: ?std.Io.Timestamp = null,
 };

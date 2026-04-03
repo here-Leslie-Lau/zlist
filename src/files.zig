@@ -75,7 +75,7 @@ pub const Files = struct {
         // we need to load stat
         // if show_detail is true, sort by mtime/size, or changed-within is enabled.
         // otherwise we can skip loading stat to improve performance.
-        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size or opt.changed_within != null);
+        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size or opt.changed_within != null or opt.size_range != null);
         const changed_within_now = if (opt.changed_within != null)
             std.Io.Timestamp.now(io, .real)
         else
@@ -102,9 +102,11 @@ pub const Files = struct {
                     .only_file = opt.only_file,
                     .keep_dirs_for_match = opt.recursive,
                     .keep_dirs_for_changed_within = opt.recursive,
+                    .keep_dirs_for_size = opt.recursive,
                     .exts = opt.exts,
                     .matches = opt.matches,
                     .changed_within = opt.changed_within,
+                    .size_range = opt.size_range,
                     .changed_within_now = changed_within_now,
                 },
                 &username_inventory,

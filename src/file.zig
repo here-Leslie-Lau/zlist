@@ -84,6 +84,10 @@ pub const File = struct {
                 return null;
             }
 
+            if (shouldFilterBySize(file.stat_t, is_dir, opt)) {
+                return null;
+            }
+
             if (opt.load_owner and builtin.os.tag != .windows) {
                 file.username = file.getName(.User, username_inventory, groupname_inventory) orelse "UNKNOWN";
                 file.groupname = file.getName(.Group, username_inventory, groupname_inventory) orelse "UNKNOWN";
@@ -127,6 +131,37 @@ pub const File = struct {
         const now = opt.changed_within_now orelse return false;
         const age = stat.mtime.durationTo(now);
         return age.nanoseconds > max_age.nanoseconds;
+    }
+
+    inline fn shouldFilterBySize(stat_t: ?Stat, is_dir: bool, opt: opts.FileOptions) bool {
+        const size_range = opt.size_range orelse return false;
+        if (is_dir) {
+            return !opt.keep_dirs_for_size;
+        }
+
+        const stat = stat_t orelse return true;
+
+        if (size_range.min_bytes) |min_bytes| {
+            if (size_range.min_inclusive) {
+                if (stat.size < min_bytes) {
+                    return true;
+                }
+            } else if (stat.size <= min_bytes) {
+                return true;
+            }
+        }
+
+        if (size_range.max_bytes) |max_bytes| {
+            if (size_range.max_inclusive) {
+                if (stat.size > max_bytes) {
+                    return true;
+                }
+            } else if (stat.size >= max_bytes) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     pub fn nameLessThan(_: void, lhs: Self, rhs: Self) bool {
