@@ -13,6 +13,7 @@ const params_desc: []const u8 = blk: {
     \\-l, --long                 List files in the long format.
     \\-a, --a                    Include directory entries whose names begin with a dot (‘.’).
     \\-s, --sort <SORTTYPE>      Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc), dir_first(directories first), mtime(modification time desc), size(file size desc).
+    \\    --size <str>...        Only show files within a size range (e.g. --size gt:10K --size lte:2M).
     \\    --changed-within <str> Only show entries modified within a time range (e.g. --changed-within 7d).
     \\-r, --recursive            Recursively list subdirectories encountered. Equivalent to -L 0.
     \\-L, --level <INT>          Limit the depth of recursion. 0 means infinite.
