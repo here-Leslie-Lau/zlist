@@ -502,8 +502,13 @@ pub const Files = struct {
                 // recursive itself
                 const child_connector = if (is_last) "    " else "│   ";
 
-                var buf: [128]u8 = undefined;
-                const new_prefix = try std.fmt.bufPrint(&buf, "{s}{s}", .{ prefix, child_connector });
+                var prefix_builder = std.ArrayList(u8).init(self.allocator);
+                defer prefix_builder.deinit();
+
+                try prefix_builder.appendSlice(prefix);
+                try prefix_builder.appendSlice(child_connector);
+
+                const new_prefix = prefix_builder.items;
 
                 try sub_files.listRecursive(term, new_prefix, false, sub_dir, mode_opt);
 
