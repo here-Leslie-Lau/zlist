@@ -8,6 +8,46 @@ const opts = @import("opts.zig");
 const size_units = [_][]const u8{ "B", "K", "M", "G", "T" };
 const month_names = [_][]const u8{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+const Date = struct {
+    year: i32 = 0,
+    month: u32 = 0,
+    day: u32 = 0,
+};
+
+const S: u32 = 82;
+const K: u32 = 719468 + 146097 * S;
+const L: u32 = 400 * S;
+
+fn rdToDateCpp(N_U: i32) Date {
+    // Rata die shift
+    const N: u32 = @as(u32, @bitCast(N_U)) +% K;
+
+    // Century
+    const N_1: u32 = 4 * N + 3;
+    const C: u32 = N_1 / 146097;
+    const N_C: u32 = (N_1 % 146097) / 4;
+
+    // Year
+    const N_2: u32 = 4 * N_C + 3;
+    const P_2: u64 = @as(u64, 2939745) * N_2;
+    const Z: u32 = @intCast(P_2 / 4294967296);
+    const N_Y: u32 = @intCast((P_2 % 4294967296) / 2939745 / 4);
+    const Y: u32 = 100 * C + Z;
+
+    // Month and day
+    const N_3: u32 = 2141 * N_Y + 197913;
+    const M: u32 = N_3 / 65536;
+    const D: u32 = (N_3 % 65536) / 2141;
+
+    // Map. (Notice the year correction, including type change.)
+    const J: u32 = @intFromBool(N_Y >= 306);
+    const Y_G: i32 = @intCast(@as(i32, @bitCast(Y -% L)) + @as(i32, @intCast(J)));
+    const M_G: u32 = if (J != 0) M - 12 else M;
+    const D_G: u32 = D + 1;
+
+    return .{ .year = Y_G, .month = M_G, .day = D_G };
+}
+
 // Permission bits from posix standard
 const S_IRUSR = 0o400;
 const S_IWUSR = 0o200;
@@ -399,27 +439,23 @@ pub const File = struct {
 
     /// format modification time to string
     pub inline fn formatTime(self: Self, buf: []u8) ![]u8 {
-        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(self.stat_t.?.mtime.toSeconds()) };
-        const epoch_day = epoch_seconds.getEpochDay();
-        const year_day = epoch_day.calculateYearDay();
-        const month_day = year_day.calculateMonthDay();
-        const day_seconds = epoch_seconds.getDaySeconds();
-        const year = year_day.year;
-        // month_day.month.numeric() 返回 1-12，数组索引需要 0-11
-        const month_index = @as(usize, month_day.month.numeric()) - 1;
-        const day = month_day.day_index + 1; // day_index 是从 0 开始的
-        const hour = day_seconds.getHoursIntoDay();
-        const min = day_seconds.getMinutesIntoHour();
-        const sec = day_seconds.getSecondsIntoMinute();
+        const epoch_seconds: u64 = @as(u64, @bitCast(self.stat_t.?.mtime.toSeconds()));
+        const epoch_day = epoch_seconds / 86_400;
+        const date = rdToDateCpp(@intCast(epoch_day));
+        var leftover_sec = epoch_seconds % 86_400;
+        const hour = leftover_sec / 3600;
+        leftover_sec = leftover_sec % 3600;
+        const min = leftover_sec / 60;
+        const sec = leftover_sec % 60;
 
         //  %b %d %H:%M:%S %Y in C Language
         return std.fmt.bufPrint(buf, "{s} {d:0>2} {d:0>2}:{d:0>2}:{d:0>2} UTC {d}", .{
-            month_names[month_index],
-            day,
+            month_names[date.month - 1],
+            date.day,
             hour,
             min,
             sec,
-            year,
+            date.year,
         });
     }
 };
