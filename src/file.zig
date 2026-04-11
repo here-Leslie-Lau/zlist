@@ -8,6 +8,12 @@ const opts = @import("opts.zig");
 const size_units = [_][]const u8{ "B", "K", "M", "G", "T" };
 const month_names = [_][]const u8{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+// Date calculation algorithm developed by Neri/Schneider (2021): https://arxiv.org/abs/2102.06959v1
+// Originally written in C++ version (https://github.com/cassioneri/calendar) of the
+// mentioned paper.
+// The Zig version is a port from the C++ version by FOberstein and can be
+// found here: https://codeberg.org/FObersteiner/zdt/src/commit/e03e31e0754cd246428a2b83ff1ecfdc576e675e/benchmark/src/bmarks_zbench_calendar.zig#L100-L138
+
 const Date = struct {
     year: i32 = 0,
     month: u32 = 0,
@@ -441,12 +447,15 @@ pub const File = struct {
     pub inline fn formatTime(self: Self, buf: []u8) ![]u8 {
         const epoch_seconds: u64 = @as(u64, @bitCast(self.stat_t.?.mtime.toSeconds()));
         const epoch_day = epoch_seconds / 86_400;
+        // Date calculated by the Neri/Schneider algorithm
         const date = rdToDateCpp(@intCast(epoch_day));
-        var leftover_sec = epoch_seconds % 86_400;
-        const hour = leftover_sec / 3600;
-        leftover_sec = leftover_sec % 3600;
-        const min = leftover_sec / 60;
-        const sec = leftover_sec % 60;
+
+        // Leftover seconds used to calculate the day-time
+        const day_leftover_sec = epoch_seconds % 86_400;
+        const hour = day_leftover_sec / 3600;
+        const hour_leftover_sec = day_leftover_sec % 3600;
+        const min = hour_leftover_sec / 60;
+        const sec = hour_leftover_sec % 60;
 
         //  %b %d %H:%M:%S %Y in C Language
         return std.fmt.bufPrint(buf, "{s} {d:0>2} {d:0>2}:{d:0>2}:{d:0>2} UTC {d}", .{
