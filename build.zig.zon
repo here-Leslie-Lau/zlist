@@ -1,0 +1,12 @@
+.{
+    .name = .zlist,
+    .version = "0.16.0-dev.3142+5ccfeb926",
+    .dependencies = .{
+        .clap = .{
+            .url = "git+https://github.com/Hejsil/zig-clap#fc1e5cc3f6d9d3001112385ee6256d694e959d2f",
+            .hash = "clap-0.11.0-oBajB7foAQC3Iyn4IVCkUdYaOVVng5IZkSncySTjNig1",
+        },
+    },
+    .paths = .{""},
+    .fingerprint = 0x10cc28778dc796fb,
+}

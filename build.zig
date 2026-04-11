@@ -22,14 +22,12 @@ pub fn build(b: *std.Build) void {
         });
 
         // add clap as a dependency
-        const clap = b.addModule(
-            "clap",
-            .{
-                .root_source_file = b.path("libs/clap/clap.zig"),
-                .link_libc = true,
-            },
-        );
-        exe.root_module.addImport("clap", clap);
+        const clap = b.dependency("clap", .{
+            .target = target,
+            .optimize = optimize,
+        });
+
+        exe.root_module.addImport("clap", clap.module("clap"));
 
         b.installArtifact(exe);
     }
