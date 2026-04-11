@@ -9,21 +9,22 @@ var threaded: std.Io.Threaded = undefined;
 
 const params_desc: []const u8 = blk: {
     break :blk
-    \\-h, --help                 Usage: zl [OPTIONS: -l -a -s=length ...] [Directory]
-    \\-l, --long                 List files in the long format.
-    \\-a, --a                    Include directory entries whose names begin with a dot (‘.’).
-    \\-s, --sort <SORTTYPE>      Sort results. Default: name(asc). OPTIONS: name(asc), length(name length asc), dir_first(directories first), mtime(modification time desc), size(file size desc).
-    \\    --size <str>...        Only show files within a size range (e.g. --size gt:10K --size lte:2M).
-    \\    --changed-within <str> Only show entries modified within a time range (e.g. --changed-within 7d).
-    \\-r, --recursive            Recursively list subdirectories encountered. Equivalent to -L 0.
-    \\-L, --level <INT>          Limit the depth of recursion. 0 means infinite.
-    \\-p, --pure                 Only show file names, without colors or other formatting.
-    \\-R, --report               Shows brief report about number of files and folders shown.
-    \\-d, --dir                  Only show directories, not files. When used in conjunction with -D, neither is effective.
-    \\-D, --no_dir               Only show files, not directories. When used in conjunction with -d, neither is effective.
-    \\-g, --git                  Show git status of files. Only effective when in long format.
+    \\-h, --help                 Usage: zl [OPTIONS] [Directory]
+    \\-l, --long                 Show the long view.
+    \\-a, --a                    Include hidden entries.
+    \\    --du                   Show recursive directory size in long view and size sort. This is the sum of file sizes, not the same as `du` disk usage.
+    \\-s, --sort <SORTTYPE>      Sort results. Default: name. OPTIONS: name, length, dir_first, mtime, size.
+    \\    --size <str>...        Filter files by size range (e.g. --size gt:10K --size lte:2M).
+    \\    --changed-within <str> Only show entries changed within a time range (e.g. --changed-within 7d).
+    \\-r, --recursive            Recurse into subdirectories. Same as -L 0.
+    \\-L, --level <INT>          Limit recursion depth. 0 means no limit.
+    \\-p, --pure                 Show names only, without colors or icons.
+    \\-R, --report               Show a short summary of files and folders.
+    \\-d, --dir                  Only show directories. If used with -D, both are ignored.
+    \\-D, --no_dir               Only show files. If used with -d, both are ignored.
+    \\-g, --git                  Show git status in long view.
     \\-e, --ext <str>...         Filter by extension (e.g. --ext zig,md,ts).
-    \\-m, --match <str>...       Match file names/subtring (e.g. --match main,readme).
+    \\-m, --match <str>...       Filter names by substring (e.g. --match main,readme).
     \\<str>...
     \\
     ;

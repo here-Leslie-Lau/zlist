@@ -22,6 +22,10 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
         opt.show_hidden = true;
     }
 
+    if (res.args.du != 0) {
+        opt.recursive_dir_size = true;
+    }
+
     if (res.args.sort) |sort| {
         opt.sort_type = sort;
     }
