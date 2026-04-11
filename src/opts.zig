@@ -75,6 +75,8 @@ pub const FilesOptions = struct {
     changed_within: ?std.Io.Duration = null,
     /// only show files whose size falls within this range.
     size_range: ?SizeRange = null,
+    /// when true, directory size can be replaced with the recursive size of its contents.
+    recursive_dir_size: bool = false,
 };
 
 pub const FileOptions = struct {

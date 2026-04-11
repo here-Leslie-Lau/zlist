@@ -74,10 +74,13 @@ pub const Files = struct {
         var total_folders: usize = 0;
         var total_files: usize = 0;
 
+        // determine if we need to calculate recursive directory size. it is needed when recursive_dir_size is enabled, and either show_detail is true or sort by size.
+        const needs_recursive_dir_size = opt.recursive_dir_size and (opt.show_detail or opt.sort_type == .size);
+
         // we need to load stat
         // if show_detail is true, sort by mtime/size, or changed-within is enabled.
         // otherwise we can skip loading stat to improve performance.
-        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size or opt.changed_within != null or opt.size_range != null);
+        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size or opt.changed_within != null or opt.size_range != null or needs_recursive_dir_size);
         const changed_within_now = if (opt.changed_within != null)
             std.Io.Timestamp.now(io, .real)
         else
@@ -139,6 +142,18 @@ pub const Files = struct {
             try files.append(allocator, fs);
         }
 
+        if (needs_recursive_dir_size) {
+            for (files.items) |*item| {
+                if (!item.is_dir) continue;
+
+                const sub_dir = dir.openDir(io, item.name, .{ .iterate = true }) catch continue;
+                defer sub_dir.close(io);
+
+                const recursive_size = calculateDirectorySize(io, sub_dir) catch continue;
+                item.setRecursiveSize(recursive_size);
+            }
+        }
+
         var loaded_git = false;
         var git_inventory: std.StringHashMap(git.GitStatus) = undefined;
         // git integration is enabled, and current directory is a git repository
@@ -188,6 +203,30 @@ pub const Files = struct {
 
     pub fn deinit(self: *Self) void {
         self.items.deinit(self.allocator);
+    }
+
+    /// recursively calculate directory size by summing up sizes of all descendant files.
+    fn calculateDirectorySize(io: std.Io, dir: std.Io.Dir) anyerror!u64 {
+        var total_size: u64 = 0;
+        var it = dir.iterate();
+
+        while (try it.next(io)) |entry| {
+            const stat = file.File.statForName(entry.name, &dir) orelse continue;
+
+            if (entry.kind == .directory) {
+                // recursively calculate size for subdirectory
+                const child_dir = dir.openDir(io, entry.name, .{ .iterate = true }) catch continue;
+                defer child_dir.close(io);
+
+                const child_size = calculateDirectorySize(io, child_dir) catch continue;
+                total_size = std.math.add(u64, total_size, child_size) catch return error.Overflow;
+                continue;
+            }
+
+            total_size = std.math.add(u64, total_size, stat.size) catch return error.Overflow;
+        }
+
+        return total_size;
     }
 
     /// list files in simple mode
@@ -610,4 +649,69 @@ test "recursive" {
 
     try files.listRecursive(term, "", true, tmp_dir.dir, .{ .pure = false });
     try stdout_writer.interface.flush();
+}
+
+test "recursive directory size uses descendant file sizes" {
+    const io = testing.io;
+
+    var tmp_dir = testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "root.txt", .data = "abcd" });
+    try tmp_dir.dir.createDirPath(io, "sub_dir/nested");
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "sub_dir/child.txt", .data = "hello" });
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "sub_dir/nested/deep.txt", .data = "xyz" });
+
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+
+    var files = try Files.init(
+        arena.allocator(),
+        io,
+        tmp_dir.dir,
+        .{ .show_detail = true, .recursive_dir_size = true },
+    );
+    defer files.deinit();
+
+    var found_dir = false;
+    for (files.items.items) |entry| {
+        if (!std.mem.eql(u8, entry.name, "sub_dir")) continue;
+
+        found_dir = true;
+        try testing.expectEqual(@as(?u64, 8), entry.effectiveSize());
+    }
+
+    try testing.expect(found_dir);
+}
+
+test "without recursive directory size directory keeps stat size" {
+    const io = testing.io;
+
+    var tmp_dir = testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    try tmp_dir.dir.createDirPath(io, "sub_dir");
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "sub_dir/child.txt", .data = "hello" });
+
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+
+    var files = try Files.init(
+        arena.allocator(),
+        io,
+        tmp_dir.dir,
+        .{ .show_detail = true },
+    );
+    defer files.deinit();
+
+    var found_dir = false;
+    for (files.items.items) |entry| {
+        if (!std.mem.eql(u8, entry.name, "sub_dir")) continue;
+
+        found_dir = true;
+        try testing.expect(entry.recursive_size == null);
+        try testing.expect(entry.effectiveSize() != null);
+    }
+
+    try testing.expect(found_dir);
 }

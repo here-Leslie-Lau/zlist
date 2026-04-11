@@ -73,6 +73,7 @@ pub const File = struct {
     name: []const u8,
 
     stat_t: ?Stat,
+    recursive_size: ?u64,
     username: []const u8,
     groupname: []const u8,
 
@@ -118,6 +119,7 @@ pub const File = struct {
             .is_exec = false,
             .name = entry.name,
             .stat_t = null,
+            .recursive_size = null,
             .username = "",
             .groupname = "",
         };
@@ -238,12 +240,47 @@ pub const File = struct {
     }
 
     pub fn sizeMoreThan(_: void, lhs: Self, rhs: Self) bool {
-        if (lhs.stat_t == null or rhs.stat_t == null) {
-            return false;
-        }
+        const lhs_size = lhs.effectiveSize() orelse return false;
+        const rhs_size = rhs.effectiveSize() orelse return false;
 
         // sort by size, largest first
-        return lhs.stat_t.?.size > rhs.stat_t.?.size;
+        return lhs_size > rhs_size;
+    }
+
+    /// get effective size for display and sorting.
+    /// for directories, use recursive_size if available, otherwise fallback to stat size;
+    /// for files, use stat size. Return null if no size information is available.
+    pub inline fn effectiveSize(self: Self) ?u64 {
+        if (self.is_dir) {
+            if (self.recursive_size) |size| {
+                return size;
+            }
+        }
+
+        if (self.stat_t) |stat| {
+            return stat.size;
+        }
+
+        return null;
+    }
+
+    pub inline fn setRecursiveSize(self: *Self, size: u64) void {
+        self.recursive_size = size;
+    }
+
+    pub inline fn statForName(name: []const u8, dir: *const std.Io.Dir) ?Stat {
+        const temp_file = Self{
+            .is_dir = false,
+            .is_exec = false,
+            .is_hidden = false,
+            .name = name,
+            .stat_t = null,
+            .recursive_size = null,
+            .username = "",
+            .groupname = "",
+        };
+
+        return temp_file.getStat(dir);
     }
 
     pub inline fn getStat(self: Self, dir: *const std.Io.Dir) ?Stat {
@@ -430,11 +467,9 @@ pub const File = struct {
 
     /// convert size in bytes to human-readable format
     pub inline fn humanSize(self: Self, buf: []u8) ![]u8 {
-        if (self.stat_t == null) {
+        var size = self.effectiveSize() orelse {
             return std.fmt.bufPrint(buf, "?B", .{});
-        }
-
-        var size = self.stat_t.?.size;
+        };
         var i: usize = 0;
         while (i < size_units.len - 1 and size >= 1024) : (i += 1) {
             size = size >> 10; // divide by 1024
