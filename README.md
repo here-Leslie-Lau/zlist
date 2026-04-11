@@ -45,7 +45,7 @@ Requirements: `zig` (master/0.16.0-dev recommended).
 
 ```bash
 # 1. Clone the repo
-git clone --recursive https://github.com/here-Leslie-Lau/zlist.git
+git clone git@github.com:here-Leslie-Lau/zlist.git
 cd zlist
 
 # 2. Build in release mode [ReleaseFast, ReleaseSafe, ReleaseSmall]
@@ -159,6 +159,7 @@ zl -lg
 *   [x] Smart dynamic grid layout
 *   [x] Summary report (`-R`)
 *   [x] Git status integration (`-g`)
+*   [ ] Lib API for embedding in other Zig projects
 *   [ ] Multi-threading for faster `stat` calls
 *   [ ] Custom color/icon configurations (Maybe, if you need it)
 
