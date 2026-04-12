@@ -17,6 +17,7 @@ Already pretty capable for a learning project:
 *   **Compact grid layout** that stays easy to scan.
 *   **Color and Nerd Font icons** for common file types and languages.
 *   **Readable long view** with permissions, owner, size, and timestamps.
+*   **Optional recursive directory size** in long view and size sorting.
 *   **Multiple sort modes** including name, length, directories first, mtime, and size.
 *   **Recursive listing** with optional depth limits.
 *   **Useful filters** for files, directories, extensions, names, size, and modified time.
@@ -67,6 +68,7 @@ zl [OPTIONS] [PATH]
 | :--- | :--- |
 | `-l`, `--long` | Show detailed view (permissions, size, date, user). |
 | `-a`, `--a` | Show hidden files (starting with `.`). |
+| `--du` | Show recursive directory size in long view and size sorting. This is the sum of file sizes, so it may differ from `du` disk usage. |
 | `-s`, `--sort <mode>` | `name` (A-Z) [Default]<br>`length` (Shortest first)<br>`dir_first` (Dirs first)<br>`mtime` (Newest first)<br>`size` (Largest first) |
 | `-r`, `--recursive` | Recurse into subdirectories. |
 | `-L`, `--level <INT>` | Limit the depth of recursion (use `0` for infinite depth). |
@@ -91,6 +93,16 @@ zl
 **Show all files with details (sorted by filename length):**
 ```bash
 zl -la -s length
+```
+
+**Show recursive directory sizes in long view:**
+```bash
+zl -l --du
+```
+
+**Sort by recursive directory size:**
+```bash
+zl --du -s size -l
 ```
 
 **Dig deep (recursive listing):**
@@ -159,6 +171,7 @@ zl -lg
 *   [x] Smart dynamic grid layout
 *   [x] Summary report (`-R`)
 *   [x] Git status integration (`-g`)
+*   [x] Recursive directory size (`--du`)
 *   [ ] Lib API for embedding in other Zig projects
 *   [ ] Multi-threading for faster `stat` calls
 *   [ ] Custom color/icon configurations (Maybe, if you need it)
