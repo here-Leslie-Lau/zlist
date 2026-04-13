@@ -4,12 +4,14 @@ const opts = @import("opts.zig");
 
 pub const CliConfig = struct {
     opt: opts.FilesOptions,
-    path: []const u8,
+    paths: []const []const u8,
 };
+
+const default_paths = [_][]const u8{"."};
 
 pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliConfig {
     var opt = opts.FilesOptions{ .recursion_level = 0 };
-    var path: []const u8 = ".";
+    var paths: []const []const u8 = &default_paths;
 
     if (res.args.long != 0) {
         opt.show_detail = true;
@@ -73,13 +75,13 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
     }
 
     if (res.positionals[0].len > 0) {
-        path = res.positionals[0][0];
+        paths = res.positionals[0];
     }
-    opt.path = path;
+    opt.path = paths[0];
 
     return .{
         .opt = opt,
-        .path = path,
+        .paths = paths,
     };
 }
 

@@ -9,7 +9,7 @@ var threaded: std.Io.Threaded = undefined;
 
 const params_desc: []const u8 = blk: {
     break :blk
-    \\-h, --help                 Usage: zl [OPTIONS] [Directory]
+    \\-h, --help                 Usage: zl [OPTIONS] [PATH]...
     \\-l, --long                 Show the long view.
     \\-a, --a                    Include hidden entries.
     \\    --du                   Show recursive directory size in long view and size sort. This is the sum of file sizes, not the same as `du` disk usage.
@@ -68,15 +68,49 @@ pub fn main(init: std.process.Init.Minimal) !void {
     }
     const cli = try cli_args.parseCliConfig(allocator, res);
 
+    for (cli.paths, 0..) |path, index| {
+        var opt = cli.opt;
+        opt.path = path;
+
+        runForPath(allocator, io, opt, path, cli.paths.len > 1, index) catch |err| switch (err) {
+            error.FileNotFound => std.debug.print("zl: path not found: {s}\n", .{path}),
+            error.NotDir => std.debug.print("zl: not a directory: {s}\n", .{path}),
+            else => return err,
+        };
+    }
+}
+
+inline fn runForPath(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    opt: opts.FilesOptions,
+    path: []const u8,
+    show_header: bool,
+    index: usize,
+) !void {
+    const stdout_file = std.Io.File.stdout();
+
+    if (show_header) {
+        var header_buf: [512]u8 = undefined;
+        var header_writer = stdout_file.writer(io, &header_buf);
+
+        if (index > 0) {
+            try header_writer.interface.writeAll("\n");
+        }
+
+        try header_writer.interface.print("{s}:\n", .{path});
+        try header_writer.interface.flush();
+    }
+
     const cwd = std.Io.Dir.cwd();
-    const dir = try cwd.openDir(io, cli.path, .{ .iterate = true });
+    const dir = try cwd.openDir(io, path, .{ .iterate = true });
     defer dir.close(io);
 
     var files = try fs.Files.init(
         allocator,
         io,
         dir,
-        cli.opt,
+        opt,
     );
     defer files.deinit();
 
@@ -84,7 +118,6 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // no files to show
         // stdout
         var stdout_buf: [256]u8 = undefined;
-        const stdout_file = std.Io.File.stdout();
         var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
         try stdout_writer.interface.print(comptime "\n\x1b[93m No files to show.\x1b[0m\n", .{});
@@ -95,35 +128,34 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     // stdout
     var stdout_buf: [4096]u8 = undefined;
-    const stdout_file = std.Io.File.stdout();
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
     // get term
     const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
-    if (cli.opt.show_detail) {
+    if (opt.show_detail) {
         // zl -l
-        switch (cli.opt.pure) {
+        switch (opt.pure) {
             // pure mode
             true => try files.listDetail(term, .{ .pure = true }),
             false => try files.listDetail(term, .{ .pure = false }),
         }
-    } else if (cli.opt.recursive) {
+    } else if (opt.recursive) {
         // zl -r
-        switch (cli.opt.pure) {
+        switch (opt.pure) {
             // pure mode
             true => try files.listRecursive(term, "", true, dir, .{ .pure = true }),
             false => try files.listRecursive(term, "", true, dir, .{ .pure = false }),
         }
     } else {
         // just ls command
-        switch (cli.opt.pure) {
+        switch (opt.pure) {
             // pure mode
             true => try files.list(term, stdout_file.handle, .{ .pure = true }),
             false => try files.list(term, stdout_file.handle, .{ .pure = false }),
         }
     }
 
-    if (cli.opt.report) {
+    if (opt.report) {
         try files.printReport(&stdout_writer.interface);
     }
 

@@ -1,6 +1,6 @@
 # zlist ⚡️
 
-> A simple, colorful alternative to `ls` built with **Zig**.
+> A modern, colorful alternative to `ls` built with **Zig**.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)](https://github.com/here-Leslie-Lau/zlist)
 [![Zig Version](https://img.shields.io/badge/zig-0.16.0_dev-orange?style=flat-square)](https://ziglang.org/)
