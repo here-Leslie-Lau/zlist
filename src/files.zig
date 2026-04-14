@@ -114,6 +114,7 @@ pub const Files = struct {
                     .size_range = opt.size_range,
                     .changed_within_now = changed_within_now,
                 },
+                allocator,
                 &username_inventory,
                 &groupname_inventory,
             )) orelse continue;

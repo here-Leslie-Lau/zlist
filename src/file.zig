@@ -83,6 +83,7 @@ pub const File = struct {
         entry: *const std.Io.Dir.Entry,
         dir: *const std.Io.Dir,
         opt: opts.FileOptions,
+        allocator: std.mem.Allocator,
         username_inventory: *std.AutoHashMap(std.c.uid_t, []const u8),
         groupname_inventory: *std.AutoHashMap(std.c.gid_t, []const u8),
     ) !?Self {
@@ -137,8 +138,8 @@ pub const File = struct {
             }
 
             if (opt.load_owner and builtin.os.tag != .windows) {
-                file.username = file.getName(.User, username_inventory, groupname_inventory) orelse "UNKNOWN";
-                file.groupname = file.getName(.Group, username_inventory, groupname_inventory) orelse "UNKNOWN";
+                file.username = file.getName(.User, allocator, username_inventory, groupname_inventory) orelse "UNKNOWN";
+                file.groupname = file.getName(.Group, allocator, username_inventory, groupname_inventory) orelse "UNKNOWN";
             }
         }
 
@@ -421,6 +422,7 @@ pub const File = struct {
     pub inline fn getName(
         self: Self,
         name: NameByID,
+        allocator: std.mem.Allocator,
         ui: *std.AutoHashMap(std.c.uid_t, []const u8),
         gi: *std.AutoHashMap(std.c.gid_t, []const u8),
     ) ?[]const u8 {
@@ -442,9 +444,10 @@ pub const File = struct {
                 }
 
                 const str = std.mem.span(passwd.?.*.name) orelse return null;
-                ui.put(uid, str) catch return null;
+                const owned_str = allocator.dupe(u8, str) catch return null;
+                ui.put(uid, owned_str) catch return null;
 
-                return str;
+                return owned_str;
             },
             .Group => {
                 const gid = self.stat_t.?.gid;
@@ -458,9 +461,10 @@ pub const File = struct {
                 }
 
                 const str = std.mem.span(group.?.*.name) orelse return null;
-                gi.put(gid, str) catch return null;
+                const owned_str = allocator.dupe(u8, str) catch return null;
+                gi.put(gid, owned_str) catch return null;
 
-                return str;
+                return owned_str;
             },
         }
     }
