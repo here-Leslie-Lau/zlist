@@ -103,62 +103,100 @@ inline fn runForPath(
     }
 
     const cwd = std.Io.Dir.cwd();
-    const dir = try cwd.openDir(io, path, .{ .iterate = true });
+    const dir = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
+        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, path),
+        error.FileNotFound => {
+            std.debug.print("zl: path not found: {s}\n", .{path});
+            return;
+        },
+        else => return err,
+    };
     defer dir.close(io);
 
-    var files = try fs.Files.init(
-        allocator,
-        io,
-        dir,
-        opt,
-    );
+    return runForDirectory(allocator, io, stdout_file, opt, dir);
+}
+
+inline fn runForDirectory(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    stdout_file: std.Io.File,
+    opt: opts.FilesOptions,
+    dir: std.Io.Dir,
+) !void {
+    var files = try fs.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
+    try printFiles(io, stdout_file, opt, &files, dir);
+}
+
+inline fn runForSingleFile(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    stdout_file: std.Io.File,
+    opt: opts.FilesOptions,
+    path: []const u8,
+) !void {
+    var files = try fs.Files.initSingle(allocator, io, path, opt);
+    defer files.deinit();
+
+    try printFiles(io, stdout_file, opt, &files, null);
+}
+
+fn printFiles(
+    io: std.Io,
+    stdout_file: std.Io.File,
+    opt: opts.FilesOptions,
+    files: *fs.Files,
+    dir: ?std.Io.Dir,
+) !void {
     if (files.items.items.len == 0) {
-        // no files to show
-        // stdout
-        var stdout_buf: [256]u8 = undefined;
-        var stdout_writer = stdout_file.writer(io, &stdout_buf);
-
-        try stdout_writer.interface.print(comptime "\n\x1b[93m No files to show.\x1b[0m\n", .{});
-        try stdout_writer.interface.flush();
-
-        return;
+        return printNoFiles(io, stdout_file);
     }
 
-    // stdout
     var stdout_buf: [4096]u8 = undefined;
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
-    // get term
     const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
 
     if (opt.show_detail) {
-        // zl -l
+        // long format
         switch (opt.pure) {
-            // pure mode
             true => try files.listDetail(term, .{ .pure = true }),
             false => try files.listDetail(term, .{ .pure = false }),
         }
     } else if (opt.recursive) {
-        // zl -r
-        switch (opt.pure) {
-            // pure mode
-            true => try files.listRecursive(term, "", true, dir, .{ .pure = true }),
-            false => try files.listRecursive(term, "", true, dir, .{ .pure = false }),
+        // recursive
+        if (dir) |opened_dir| {
+            switch (opt.pure) {
+                true => try files.listRecursive(term, "", true, opened_dir, .{ .pure = true }),
+                false => try files.listRecursive(term, "", true, opened_dir, .{ .pure = false }),
+            }
+        } else {
+            switch (opt.pure) {
+                true => try files.list(term, stdout_file.handle, .{ .pure = true }),
+                false => try files.list(term, stdout_file.handle, .{ .pure = false }),
+            }
         }
     } else {
-        // just ls command
+        // normal format
         switch (opt.pure) {
-            // pure mode
             true => try files.list(term, stdout_file.handle, .{ .pure = true }),
             false => try files.list(term, stdout_file.handle, .{ .pure = false }),
         }
     }
 
     if (opt.report) {
+        // print report
         try files.printReport(&stdout_writer.interface);
     }
 
+    try stdout_writer.interface.flush();
+}
+
+inline fn printNoFiles(io: std.Io, stdout_file: std.Io.File) !void {
+    var stdout_buf: [256]u8 = undefined;
+    var stdout_writer = stdout_file.writer(io, &stdout_buf);
+
+    try stdout_writer.interface.print(comptime "\n\x1b[93m No files to show.\x1b[0m\n", .{});
     try stdout_writer.interface.flush();
 }
 

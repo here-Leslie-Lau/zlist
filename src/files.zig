@@ -80,7 +80,7 @@ pub const Files = struct {
         // we need to load stat
         // if show_detail is true, sort by mtime/size, or changed-within is enabled.
         // otherwise we can skip loading stat to improve performance.
-        const load_stat = (opt.show_detail or opt.sort_type == .mtime or opt.sort_type == .size or opt.changed_within != null or opt.size_range != null or needs_recursive_dir_size);
+        const load_stat = shouldLoadStat(opt, needs_recursive_dir_size);
         const changed_within_now = if (opt.changed_within != null)
             std.Io.Timestamp.now(io, .real)
         else
@@ -199,6 +199,117 @@ pub const Files = struct {
             .loaded_git = loaded_git,
             .git_inventory = git_inventory,
         };
+    }
+
+    pub fn initSingle(
+        allocator: mem.Allocator,
+        io: std.Io,
+        path: []const u8,
+        opt: opts.FilesOptions,
+    ) !Self {
+        const parent_path = std.fs.path.dirname(path) orelse ".";
+        const base_name = std.fs.path.basename(path);
+
+        const cwd = std.Io.Dir.cwd();
+        const parent_dir = try cwd.openDir(io, parent_path, .{});
+        defer parent_dir.close(io);
+
+        const stat = try parent_dir.statFile(io, base_name, .{});
+        const entry: std.Io.Dir.Entry = .{
+            .name = base_name,
+            .kind = stat.kind,
+            .inode = 0,
+        };
+
+        var files = try std.ArrayList(file.File).initCapacity(allocator, 1);
+        errdefer files.deinit(allocator);
+
+        var max_len: usize = 0;
+        var total_folders: usize = 0;
+        var total_files: usize = 0;
+
+        const needs_recursive_dir_size = opt.recursive_dir_size and (opt.show_detail or opt.sort_type == .size);
+        const load_stat = shouldLoadStat(opt, needs_recursive_dir_size);
+        const changed_within_now = if (opt.changed_within != null)
+            std.Io.Timestamp.now(io, .real)
+        else
+            null;
+
+        var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
+        var groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8) = undefined;
+        if (opt.show_detail) {
+            username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
+            groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
+        }
+
+        if (try file.File.init(
+            &entry,
+            &parent_dir,
+            .{
+                .load_stat = load_stat,
+                .load_owner = opt.show_detail,
+                .show_hidden = opt.show_hidden,
+                .only_dir = opt.only_dir,
+                .only_file = opt.only_file,
+                .keep_dirs_for_match = opt.recursive,
+                .keep_dirs_for_changed_within = opt.recursive,
+                .keep_dirs_for_size = opt.recursive,
+                .exts = opt.exts,
+                .matches = opt.matches,
+                .changed_within = opt.changed_within,
+                .size_range = opt.size_range,
+                .changed_within_now = changed_within_now,
+            },
+            &username_inventory,
+            &groupname_inventory,
+        )) |single_file| {
+            var item = single_file;
+            item.name = try allocator.dupe(u8, base_name);
+
+            if (!opt.show_detail and !opt.recursive) {
+                max_len = item.name.len + 2;
+            }
+
+            if (opt.report) {
+                if (item.is_dir) {
+                    total_folders = 1;
+                } else {
+                    total_files = 1;
+                }
+            }
+
+            try files.append(allocator, item);
+        }
+
+        var loaded_git = false;
+        var git_inventory: std.StringHashMap(git.GitStatus) = undefined;
+        if (opt.show_git and git.isGitRepo(allocator, io, parent_path)) {
+            git_inventory = try git.getFileStatuses(allocator, io, parent_path);
+            loaded_git = true;
+        }
+
+        return .{
+            .max_display_len = max_len,
+            .total_folders = total_folders,
+            .total_files = total_files,
+            .allocator = allocator,
+            .io = io,
+            .items = files,
+            .opt = opt,
+            .username_inventory = username_inventory,
+            .groupname_inventory = groupname_inventory,
+            .loaded_git = loaded_git,
+            .git_inventory = git_inventory,
+        };
+    }
+
+    inline fn shouldLoadStat(opt: opts.FilesOptions, needs_recursive_dir_size: bool) bool {
+        return opt.show_detail or
+            opt.sort_type == .mtime or
+            opt.sort_type == .size or
+            opt.changed_within != null or
+            opt.size_range != null or
+            needs_recursive_dir_size;
     }
 
     pub fn deinit(self: *Self) void {
