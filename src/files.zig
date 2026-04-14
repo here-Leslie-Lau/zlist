@@ -55,10 +55,13 @@ pub const Files = struct {
     /// since getting username from uid is a costly operation, we can cache it to improve performance.
     username_inventory: std.AutoHashMap(std.c.uid_t, []const u8),
     groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8),
+    username_inventory_initialized: bool = false,
+    groupname_inventory_initialized: bool = false,
 
     loaded_git: bool = false,
     /// for caching git status, key is filename, value is git status.
     git_inventory: std.StringHashMap(git.GitStatus),
+    git_inventory_initialized: bool = false,
 
     /// init a Files from a directory
     pub fn init(
@@ -89,9 +92,13 @@ pub const Files = struct {
         // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
         var groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8) = undefined;
+        var username_inventory_initialized = false;
+        var groupname_inventory_initialized = false;
         if (opt.show_detail) {
             username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
             groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
+            username_inventory_initialized = true;
+            groupname_inventory_initialized = true;
         }
 
         var it = dir.iterate();
@@ -197,8 +204,11 @@ pub const Files = struct {
             .opt = opt,
             .username_inventory = username_inventory,
             .groupname_inventory = groupname_inventory,
+            .username_inventory_initialized = username_inventory_initialized,
+            .groupname_inventory_initialized = groupname_inventory_initialized,
             .loaded_git = loaded_git,
             .git_inventory = git_inventory,
+            .git_inventory_initialized = loaded_git,
         };
     }
 
@@ -238,9 +248,13 @@ pub const Files = struct {
 
         var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
         var groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8) = undefined;
+        var username_inventory_initialized = false;
+        var groupname_inventory_initialized = false;
         if (opt.show_detail) {
             username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
             groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
+            username_inventory_initialized = true;
+            groupname_inventory_initialized = true;
         }
 
         if (try file.File.init(
@@ -261,6 +275,7 @@ pub const Files = struct {
                 .size_range = opt.size_range,
                 .changed_within_now = changed_within_now,
             },
+            allocator,
             &username_inventory,
             &groupname_inventory,
         )) |single_file| {
@@ -299,8 +314,11 @@ pub const Files = struct {
             .opt = opt,
             .username_inventory = username_inventory,
             .groupname_inventory = groupname_inventory,
+            .username_inventory_initialized = username_inventory_initialized,
+            .groupname_inventory_initialized = groupname_inventory_initialized,
             .loaded_git = loaded_git,
             .git_inventory = git_inventory,
+            .git_inventory_initialized = loaded_git,
         };
     }
 
@@ -314,6 +332,30 @@ pub const Files = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        if (self.username_inventory_initialized) {
+            var username_it = self.username_inventory.keyIterator();
+            while (username_it.next()) |_| {
+                self.allocator.free(username_it.value().*);
+            }
+            self.username_inventory.deinit();
+        }
+
+        if (self.groupname_inventory_initialized) {
+            var groupname_it = self.groupname_inventory.keyIterator();
+            while (groupname_it.next()) |_| {
+                self.allocator.free(groupname_it.value().*);
+            }
+            self.groupname_inventory.deinit();
+        }
+
+        if (self.git_inventory_initialized) {
+            var git_it = self.git_inventory.keyIterator();
+            while (git_it.next()) |_| {
+                self.allocator.free(git_it.value().*);
+            }
+            self.git_inventory.deinit();
+        }
+
         self.items.deinit(self.allocator);
     }
 
