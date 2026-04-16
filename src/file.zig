@@ -64,6 +64,17 @@ const S_IXGRP = 0o010;
 const S_IROTH = 0o004;
 const S_IWOTH = 0o002;
 const S_IXOTH = 0o001;
+const S_ISUID = 0o4000;
+const S_ISGID = 0o2000;
+const S_ISVTX = 0o1000;
+
+inline fn formatExecPermission(mode: u32, exec_bit: u16, special_bit: u16, special_char: u8, no_exec_special_char: u8) u8 {
+    const has_exec = mode & exec_bit != 0;
+    if (mode & special_bit != 0) {
+        return if (has_exec) special_char else no_exec_special_char;
+    }
+    return if (has_exec) 'x' else '-';
+}
 
 pub const File = struct {
     const Self = @This();
@@ -400,15 +411,15 @@ pub const File = struct {
             // User
             buf[1] = if (m & S_IRUSR != 0) 'r' else '-';
             buf[2] = if (m & S_IWUSR != 0) 'w' else '-';
-            buf[3] = if (m & S_IXUSR != 0) 'x' else '-';
+            buf[3] = formatExecPermission(m, S_IXUSR, S_ISUID, 's', 'S');
             // Group
             buf[4] = if (m & S_IRGRP != 0) 'r' else '-';
             buf[5] = if (m & S_IWGRP != 0) 'w' else '-';
-            buf[6] = if (m & S_IXGRP != 0) 'x' else '-';
+            buf[6] = formatExecPermission(m, S_IXGRP, S_ISGID, 's', 'S');
             // Other
             buf[7] = if (m & S_IROTH != 0) 'r' else '-';
             buf[8] = if (m & S_IWOTH != 0) 'w' else '-';
-            buf[9] = if (m & S_IXOTH != 0) 'x' else '-';
+            buf[9] = formatExecPermission(m, S_IXOTH, S_ISVTX, 't', 'T');
         }
         return buf;
     }
