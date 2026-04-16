@@ -95,6 +95,7 @@ pub const File = struct {
         entry: *const std.Io.Dir.Entry,
         dir: *const std.Io.Dir,
         opt: opts.FileOptions,
+        allocator: std.mem.Allocator,
         username_inventory: *std.AutoHashMap(std.c.uid_t, []const u8),
         groupname_inventory: *std.AutoHashMap(std.c.gid_t, []const u8),
     ) !?Self {
