@@ -66,7 +66,22 @@ pub fn main(init: std.process.Init.Minimal) !void {
         std.debug.print("{s}\n", .{params_desc});
         return;
     }
-    const cli = try cli_args.parseCliConfig(allocator, res);
+
+    const cli = cli_args.parseCliConfig(allocator, res) catch |err| switch (err) {
+        error.InvalidChangedWithin => {
+            printInvalidChangedWithin();
+            return;
+        },
+        error.InvalidSize => {
+            printInvalidSize();
+            return;
+        },
+        error.ConflictingSizeRange => {
+            printConflictingSizeRange();
+            return;
+        },
+        else => return err,
+    };
 
     for (cli.paths, 0..) |path, index| {
         var opt = cli.opt;
@@ -192,12 +207,33 @@ fn printFiles(
     try stdout_writer.interface.flush();
 }
 
-inline fn printNoFiles(io: std.Io, stdout_file: std.Io.File) !void {
+fn printNoFiles(io: std.Io, stdout_file: std.Io.File) !void {
     var stdout_buf: [256]u8 = undefined;
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
     try stdout_writer.interface.print(comptime "\n\x1b[93m No files to show.\x1b[0m\n", .{});
     try stdout_writer.interface.flush();
+}
+
+fn printInvalidChangedWithin() void {
+    std.debug.print(
+        "zl: invalid value for --changed-within\nexpected format: 30s, 15m, 12h, 7d, 2w\nsupported units: s, m, h, d, w\n",
+        .{},
+    );
+}
+
+fn printInvalidSize() void {
+    std.debug.print(
+        "zl: invalid value for --size\nexpected format: gt:10K, lte:2M, eq:512B\nsupported operators: gt, gte, lt, lte, eq\nsupported units: B, K, M, G, T\n",
+        .{},
+    );
+}
+
+fn printConflictingSizeRange() void {
+    std.debug.print(
+        "zl: conflicting --size filters\nminimum size cannot be greater than maximum size\n",
+        .{},
+    );
 }
 
 test {
