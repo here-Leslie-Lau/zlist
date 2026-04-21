@@ -99,10 +99,12 @@ pub const Files = struct {
         while (try it.next(io)) |entry| {
             var fs = (try file.File.init(
                 allocator,
+                io,
                 &entry,
                 &dir,
                 .{
                     .load_stat = load_stat,
+                    .load_symlink_target = opt.show_detail,
                     .load_owner = opt.show_detail,
                     .show_hidden = opt.show_hidden,
                     .only_dir = opt.only_dir,
@@ -246,10 +248,12 @@ pub const Files = struct {
 
         if (try file.File.init(
             allocator,
+            io,
             &entry,
             &parent_dir,
             .{
                 .load_stat = load_stat,
+                .load_symlink_target = opt.show_detail,
                 .load_owner = opt.show_detail,
                 .show_hidden = opt.show_hidden,
                 .only_dir = opt.only_dir,

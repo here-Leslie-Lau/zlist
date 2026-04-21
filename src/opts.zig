@@ -82,6 +82,8 @@ pub const FilesOptions = struct {
 pub const FileOptions = struct {
     /// load file stat, which is needed for showing mtime, size, permissions, etc. but can be slow for large directories. Default is false.
     load_stat: bool = false,
+    /// load symbolic link target text for display in long mode only.
+    load_symlink_target: bool = false,
     /// load owner/group names from uid/gid (needed by detail mode only).
     load_owner: bool = false,
     /// show hidden files

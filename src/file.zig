@@ -85,6 +85,7 @@ pub const File = struct {
 
     stat_t: ?Stat,
     recursive_size: ?u64,
+    symlink_target: ?[]const u8,
     username: []const u8,
     groupname: []const u8,
 
@@ -92,6 +93,7 @@ pub const File = struct {
     /// Return null if the file should be skipped (e.g., hidden files when not showing hidden).
     pub inline fn init(
         allocator: std.mem.Allocator,
+        io: std.Io,
         entry: *const std.Io.Dir.Entry,
         dir: *const std.Io.Dir,
         opt: opts.FileOptions,
@@ -132,6 +134,7 @@ pub const File = struct {
             .name = entry.name,
             .stat_t = null,
             .recursive_size = null,
+            .symlink_target = null,
             .username = "",
             .groupname = "",
         };
@@ -146,6 +149,11 @@ pub const File = struct {
 
             if (shouldFilterBySize(file.stat_t, is_dir, opt)) {
                 return null;
+            }
+
+            if (opt.load_symlink_target and file.stat_t != null and file.stat_t.?.kind == .sym_link) {
+                // read symlink target for symbolic links
+                file.symlink_target = try file.readSymlinkTarget(allocator, io, dir);
             }
 
             if (opt.load_owner and builtin.os.tag != .windows) {
@@ -288,6 +296,7 @@ pub const File = struct {
             .name = name,
             .stat_t = null,
             .recursive_size = null,
+            .symlink_target = null,
             .username = "",
             .groupname = "",
         };
@@ -424,6 +433,14 @@ pub const File = struct {
         return buf;
     }
 
+    pub inline fn writeLongDisplayName(self: Self, writer: anytype) !void {
+        try writer.print("{s}", .{self.name});
+
+        if (self.symlink_target) |target| {
+            try writer.print(" -> {s}", .{target});
+        }
+    }
+
     pub const NameByID = enum {
         User,
         Group,
@@ -516,6 +533,21 @@ pub const File = struct {
             sec,
             date.year,
         });
+    }
+
+    inline fn readSymlinkTarget(self: Self, allocator: std.mem.Allocator, io: std.Io, dir: *const std.Io.Dir) !?[]const u8 {
+        if (builtin.os.tag == .windows) {
+            return null;
+        }
+
+        // i think 512 bytes should be enough (yet 0-0).
+        var target_buf: [512]u8 = undefined;
+        const len = dir.readLink(io, self.name, &target_buf) catch |err| switch (err) {
+            error.NotLink, error.FileNotFound => return null,
+            else => return err,
+        };
+
+        return try allocator.dupe(u8, target_buf[0..len]);
     }
 };
 
