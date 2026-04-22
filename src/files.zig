@@ -527,6 +527,7 @@ pub const Files = struct {
         var perm_buf: [10]u8 = undefined;
         var size_buf: [32]u8 = undefined;
         var time_buf: [32]u8 = undefined;
+        var display_name_buf: [std.fs.max_path_bytes]u8 = undefined;
 
         const show_git = self.loaded_git and !mode_opt.pure;
 
@@ -549,7 +550,7 @@ pub const Files = struct {
                     try val.humanSize(&size_buf),
                     try val.formatTime(&time_buf),
                     icon,
-                    val.name,
+                    try val.formatLongDisplayName(&display_name_buf),
                 });
             } else {
                 if (mode_opt.pure) {
@@ -559,7 +560,7 @@ pub const Files = struct {
                         val.groupname,
                         try val.humanSize(&size_buf),
                         try val.formatTime(&time_buf),
-                        val.name,
+                        try val.formatLongDisplayName(&display_name_buf),
                     });
                 } else {
                     const icon = self.getIcon(val.is_dir, val.name);
@@ -570,7 +571,7 @@ pub const Files = struct {
                         try val.humanSize(&size_buf),
                         try val.formatTime(&time_buf),
                         icon,
-                        val.name,
+                        try val.formatLongDisplayName(&display_name_buf),
                     });
                 }
             }

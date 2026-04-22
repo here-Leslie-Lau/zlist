@@ -433,12 +433,12 @@ pub const File = struct {
         return buf;
     }
 
-    pub inline fn writeLongDisplayName(self: Self, writer: anytype) !void {
-        try writer.print("{s}", .{self.name});
-
+    pub inline fn formatLongDisplayName(self: Self, buf: []u8) ![]const u8 {
         if (self.symlink_target) |target| {
-            try writer.print(" -> {s}", .{target});
+            return std.fmt.bufPrint(buf, "{s} -> {s}", .{ self.name, target });
         }
+
+        return std.fmt.bufPrint(buf, "{s}", .{self.name});
     }
 
     pub const NameByID = enum {
