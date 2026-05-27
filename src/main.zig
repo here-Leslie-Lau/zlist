@@ -2,8 +2,7 @@ const std = @import("std");
 
 const clap = @import("clap");
 const cli_args = @import("cli_args.zig");
-const fs = @import("files.zig");
-const opts = @import("opts.zig");
+const zlist = @import("zlist.zig");
 
 var threaded: std.Io.Threaded = undefined;
 
@@ -45,7 +44,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // parsers
     const parsers = comptime .{
         .str = clap.parsers.string,
-        .SORTTYPE = clap.parsers.enumeration(opts.SortType),
+        .SORTTYPE = clap.parsers.enumeration(zlist.SortType),
         .INT = clap.parsers.int(i8, 10),
     };
 
@@ -98,7 +97,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
 inline fn runForPath(
     allocator: std.mem.Allocator,
     io: std.Io,
-    opt: opts.FilesOptions,
+    opt: zlist.FilesOptions,
     path: []const u8,
     show_header: bool,
     index: usize,
@@ -135,10 +134,10 @@ inline fn runForDirectory(
     allocator: std.mem.Allocator,
     io: std.Io,
     stdout_file: std.Io.File,
-    opt: opts.FilesOptions,
+    opt: zlist.FilesOptions,
     dir: std.Io.Dir,
 ) !void {
-    var files = try fs.Files.init(allocator, io, dir, opt);
+    var files = try zlist.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
     try printFiles(io, stdout_file, opt, &files, dir);
@@ -148,10 +147,10 @@ inline fn runForSingleFile(
     allocator: std.mem.Allocator,
     io: std.Io,
     stdout_file: std.Io.File,
-    opt: opts.FilesOptions,
+    opt: zlist.FilesOptions,
     path: []const u8,
 ) !void {
-    var files = try fs.Files.initSingle(allocator, io, path, opt);
+    var files = try zlist.Files.initSingle(allocator, io, path, opt);
     defer files.deinit();
 
     try printFiles(io, stdout_file, opt, &files, null);
@@ -160,8 +159,8 @@ inline fn runForSingleFile(
 fn printFiles(
     io: std.Io,
     stdout_file: std.Io.File,
-    opt: opts.FilesOptions,
-    files: *fs.Files,
+    opt: zlist.FilesOptions,
+    files: *zlist.Files,
     dir: ?std.Io.Dir,
 ) !void {
     if (files.items.items.len == 0) {
@@ -237,7 +236,7 @@ fn printConflictingSizeRange() void {
 }
 
 test {
-    _ = @import("files.zig");
+    _ = @import("zlist.zig");
 
     std.testing.refAllDecls(@This());
 }

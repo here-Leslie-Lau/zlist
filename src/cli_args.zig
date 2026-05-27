@@ -1,16 +1,16 @@
 const std = @import("std");
 
-const opts = @import("opts.zig");
+const zlist = @import("zlist.zig");
 
 pub const CliConfig = struct {
-    opt: opts.FilesOptions,
+    opt: zlist.FilesOptions,
     paths: []const []const u8,
 };
 
 const default_paths = [_][]const u8{"."};
 
 pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliConfig {
-    var opt = opts.FilesOptions{ .recursion_level = 0 };
+    var opt = zlist.FilesOptions{ .recursion_level = 0 };
     var paths: []const []const u8 = &default_paths;
 
     if (res.args.long != 0) {
@@ -128,12 +128,12 @@ inline fn parseChangedWithin(value: []const u8) ParseChangedWithinError!std.Io.D
     };
 }
 
-inline fn parseSizeArgs(values: []const []const u8) ParseSizeError!?opts.SizeRange {
+inline fn parseSizeArgs(values: []const []const u8) ParseSizeError!?zlist.SizeRange {
     if (values.len == 0) {
         return null;
     }
 
-    var size_range = opts.SizeRange{};
+    var size_range = zlist.SizeRange{};
     for (values) |value| {
         try applySizeClause(&size_range, value);
     }
@@ -142,7 +142,7 @@ inline fn parseSizeArgs(values: []const []const u8) ParseSizeError!?opts.SizeRan
     return size_range;
 }
 
-inline fn applySizeClause(size_range: *opts.SizeRange, value: []const u8) ParseSizeError!void {
+inline fn applySizeClause(size_range: *zlist.SizeRange, value: []const u8) ParseSizeError!void {
     const trimmed = std.mem.trim(u8, value, " \t\r\n");
     const colon_index = std.mem.indexOfScalar(u8, trimmed, ':') orelse return error.InvalidSize;
     const op_text = std.mem.trim(u8, trimmed[0..colon_index], " \t\r\n");
@@ -167,7 +167,7 @@ inline fn applySizeClause(size_range: *opts.SizeRange, value: []const u8) ParseS
     }
 }
 
-inline fn applyMinBound(size_range: *opts.SizeRange, size_bytes: u64, inclusive: bool) ParseSizeError!void {
+inline fn applyMinBound(size_range: *zlist.SizeRange, size_bytes: u64, inclusive: bool) ParseSizeError!void {
     if (size_range.min_bytes) |curr| {
         if (size_bytes > curr) {
             size_range.min_bytes = size_bytes;
@@ -186,7 +186,7 @@ inline fn applyMinBound(size_range: *opts.SizeRange, size_bytes: u64, inclusive:
     size_range.min_inclusive = inclusive;
 }
 
-inline fn applyMaxBound(size_range: *opts.SizeRange, size_bytes: u64, inclusive: bool) ParseSizeError!void {
+inline fn applyMaxBound(size_range: *zlist.SizeRange, size_bytes: u64, inclusive: bool) ParseSizeError!void {
     if (size_range.max_bytes) |curr| {
         if (size_bytes < curr) {
             size_range.max_bytes = size_bytes;
@@ -205,7 +205,7 @@ inline fn applyMaxBound(size_range: *opts.SizeRange, size_bytes: u64, inclusive:
     size_range.max_inclusive = inclusive;
 }
 
-inline fn validateSizeRange(size_range: opts.SizeRange) ParseSizeError!void {
+inline fn validateSizeRange(size_range: zlist.SizeRange) ParseSizeError!void {
     const min_bytes = size_range.min_bytes orelse return;
     const max_bytes = size_range.max_bytes orelse return;
 
