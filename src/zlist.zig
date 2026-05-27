@@ -3,6 +3,8 @@ pub const Files = @import("zlist/files.zig").Files;
 
 pub const FilesOptions = @import("zlist/opts.zig").FilesOptions;
 pub const FileOptions = @import("zlist/opts.zig").FileOptions;
+pub const ModeOptionsComptime = @import("zlist/opts.zig").ModeOptionsComptime;
+pub const PrintMode = @import("zlist/opts.zig").PrintMode;
 
 pub const SortType = @import("zlist/opts.zig").SortType;
 pub const SizeRange = @import("zlist/opts.zig").SizeRange;

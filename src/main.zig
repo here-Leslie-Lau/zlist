@@ -2,6 +2,7 @@ const std = @import("std");
 
 const clap = @import("clap");
 const cli_args = @import("cli_args.zig");
+const render = @import("render.zig");
 const zlist = @import("zlist");
 
 var threaded: std.Io.Threaded = undefined;
@@ -169,38 +170,38 @@ fn printFiles(
 
     var stdout_buf: [4096]u8 = undefined;
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
-    const term = try files.getTerminal(&stdout_writer.interface, stdout_file);
+    const term = try render.getTerminal(io, &stdout_writer.interface, stdout_file);
 
     if (opt.show_detail) {
         // long format
         switch (opt.pure) {
-            true => try files.listDetail(term, .{ .pure = true }),
-            false => try files.listDetail(term, .{ .pure = false }),
+            true => try render.listDetail(files.*, term, .{ .pure = true }),
+            false => try render.listDetail(files.*, term, .{ .pure = false }),
         }
     } else if (opt.recursive) {
         // recursive
         if (dir) |opened_dir| {
             switch (opt.pure) {
-                true => try files.listRecursive(term, "", true, opened_dir, .{ .pure = true }),
-                false => try files.listRecursive(term, "", true, opened_dir, .{ .pure = false }),
+                true => try render.listRecursive(files, term, "", true, opened_dir, .{ .pure = true }),
+                false => try render.listRecursive(files, term, "", true, opened_dir, .{ .pure = false }),
             }
         } else {
             switch (opt.pure) {
-                true => try files.list(term, stdout_file.handle, .{ .pure = true }),
-                false => try files.list(term, stdout_file.handle, .{ .pure = false }),
+                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
+                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
             }
         }
     } else {
         // normal format
         switch (opt.pure) {
-            true => try files.list(term, stdout_file.handle, .{ .pure = true }),
-            false => try files.list(term, stdout_file.handle, .{ .pure = false }),
+            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
+            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
         }
     }
 
     if (opt.report) {
         // print report
-        try files.printReport(&stdout_writer.interface);
+        try render.printReport(files.*, &stdout_writer.interface);
     }
 
     try stdout_writer.interface.flush();
@@ -237,6 +238,7 @@ fn printConflictingSizeRange() void {
 
 test {
     _ = @import("zlist");
+    _ = @import("render.zig");
 
     std.testing.refAllDecls(@This());
 }
