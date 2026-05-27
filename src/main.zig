@@ -2,7 +2,7 @@ const std = @import("std");
 
 const clap = @import("clap");
 const cli_args = @import("cli_args.zig");
-const zlist = @import("zlist.zig");
+const zlist = @import("zlist");
 
 var threaded: std.Io.Threaded = undefined;
 
@@ -236,7 +236,7 @@ fn printConflictingSizeRange() void {
 }
 
 test {
-    _ = @import("zlist.zig");
+    _ = @import("zlist");
 
     std.testing.refAllDecls(@This());
 }

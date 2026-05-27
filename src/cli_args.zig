@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const zlist = @import("zlist.zig");
+const zlist = @import("zlist");
 
 pub const CliConfig = struct {
     opt: zlist.FilesOptions,
