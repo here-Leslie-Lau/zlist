@@ -44,7 +44,8 @@ pub fn list(
     comptime mode_opt: zlist.ModeOptionsComptime,
 ) !void {
     const term_width = getTerminalWidth(handle);
-    const total_items = files.items.items.len;
+    const entries = files.entries();
+    const total_items = entries.len;
 
     if (total_items == 0) {
         return;
@@ -82,7 +83,7 @@ pub fn list(
                 const idx = c * rows + r;
                 if (idx >= total_items) continue;
 
-                const item = files.items.items[idx];
+                const item = entries[idx];
                 // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) + 1 space = 5.
                 const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5;
 
@@ -111,7 +112,7 @@ pub fn list(
 
     if (optimal_cols == 1) {
         optimal_rows = total_items;
-        final_col_widths[0] = files.max_display_len + (if (mode_opt.pure) 2 else 5);
+        final_col_widths[0] = files.maxDisplayLen() + (if (mode_opt.pure) 2 else 5);
     }
 
     for (0..optimal_rows) |r| {
@@ -119,7 +120,7 @@ pub fn list(
             const idx = c * optimal_rows + r;
             if (idx >= total_items) continue;
 
-            const val = files.items.items[idx];
+            const val = entries[idx];
             const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5;
 
             // Print prefix, icon and name
@@ -153,9 +154,9 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: zlist.M
     var time_buf: [32]u8 = undefined;
     var display_name_buf: [std.fs.max_path_bytes]u8 = undefined;
 
-    const show_git = files.loaded_git and !mode_opt.pure;
+    const show_git = files.hasGitStatus() and !mode_opt.pure;
 
-    for (files.items.items) |val| {
+    for (files.entries()) |val| {
         if (!mode_opt.pure) {
             try term.setColor(getColor(val.is_dir, val.name));
         }
@@ -228,9 +229,10 @@ pub fn listRecursive(
         }
     }
 
-    const total = files.items.items.len;
+    const entries = files.entries();
+    const total = entries.len;
 
-    for (files.items.items, 0..) |val, i| {
+    for (entries, 0..) |val, i| {
         const is_last = (i == total - 1);
         const connector = if (is_last) "└──" else "├──";
 
@@ -364,7 +366,7 @@ inline fn getColor(is_dir: bool, name: []const u8) Terminal.Color {
 }
 
 inline fn getGitStatusChar(files: zlist.Files, name: []const u8) ?u8 {
-    const status = files.git_inventory.get(name) orelse return null;
+    const status = files.gitStatus(name) orelse return null;
     return switch (status) {
         .modified => 'M',
         .added => 'A',
@@ -377,7 +379,7 @@ inline fn getGitStatusChar(files: zlist.Files, name: []const u8) ?u8 {
 }
 
 inline fn getGitStatusColor(files: zlist.Files, name: []const u8) Terminal.Color {
-    const status = files.git_inventory.get(name) orelse return Terminal.Color.reset;
+    const status = files.gitStatus(name) orelse return Terminal.Color.reset;
     return switch (status) {
         .modified => Terminal.Color.bright_yellow,
         .added => Terminal.Color.bright_green,

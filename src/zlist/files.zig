@@ -133,28 +133,7 @@ pub const Files = struct {
             loaded_git = true;
         }
 
-        switch (opt.sort_type) {
-            .length => {
-                // sort by name length
-                mem.sortUnstable(file.File, files.items, {}, file.File.nameLenLessThan);
-            },
-            .dir_first => {
-                // sort by directory first
-                mem.sortUnstable(file.File, files.items, {}, file.File.dirMoreThan);
-            },
-            .mtime => {
-                // sort by modification time desc
-                mem.sortUnstable(file.File, files.items, {}, file.File.mtimeMoreThan);
-            },
-            .size => {
-                // sort by file size desc
-                mem.sortUnstable(file.File, files.items, {}, file.File.sizeMoreThan);
-            },
-            else => {
-                // sort by name ascending
-                mem.sortUnstable(file.File, files.items, {}, file.File.nameLessThan);
-            },
-        }
+        sort(files.items, opt.sort_type);
 
         return .{
             .max_display_len = max_len,
@@ -289,8 +268,49 @@ pub const Files = struct {
         self.items.deinit(self.allocator);
     }
 
+    pub inline fn entries(self: Self) []const file.File {
+        return self.items.items;
+    }
+
+    pub inline fn maxDisplayLen(self: Self) usize {
+        return self.max_display_len;
+    }
+
+    pub inline fn hasGitStatus(self: Self) bool {
+        return self.loaded_git;
+    }
+
+    pub inline fn gitStatus(self: Self, name: []const u8) ?git.GitStatus {
+        return self.git_inventory.get(name);
+    }
+
+    fn sort(items: []file.File, sort_type: opts.SortType) void {
+        switch (sort_type) {
+            .length => {
+                // sort by name length
+                mem.sortUnstable(file.File, items, {}, file.File.nameLenLessThan);
+            },
+            .dir_first => {
+                // sort by directory first
+                mem.sortUnstable(file.File, items, {}, file.File.dirMoreThan);
+            },
+            .mtime => {
+                // sort by modification time desc
+                mem.sortUnstable(file.File, items, {}, file.File.mtimeMoreThan);
+            },
+            .size => {
+                // sort by file size desc
+                mem.sortUnstable(file.File, items, {}, file.File.sizeMoreThan);
+            },
+            else => {
+                // sort by name ascending
+                mem.sortUnstable(file.File, items, {}, file.File.nameLessThan);
+            },
+        }
+    }
+
     /// recursively calculate directory size by summing up sizes of all descendant files.
-    fn calculateDirectorySize(io: std.Io, dir: std.Io.Dir) anyerror!u64 {
+    pub fn calculateDirectorySize(io: std.Io, dir: std.Io.Dir) anyerror!u64 {
         var total_size: u64 = 0;
         var it = dir.iterate();
 
@@ -337,7 +357,7 @@ test "recursive directory size uses descendant file sizes" {
     defer files.deinit();
 
     var found_dir = false;
-    for (files.items.items) |entry| {
+    for (files.entries()) |entry| {
         if (!std.mem.eql(u8, entry.name, "sub_dir")) continue;
 
         found_dir = true;
@@ -368,7 +388,7 @@ test "without recursive directory size directory keeps stat size" {
     defer files.deinit();
 
     var found_dir = false;
-    for (files.items.items) |entry| {
+    for (files.entries()) |entry| {
         if (!std.mem.eql(u8, entry.name, "sub_dir")) continue;
 
         found_dir = true;

@@ -164,7 +164,7 @@ fn printFiles(
     files: *zlist.Files,
     dir: ?std.Io.Dir,
 ) !void {
-    if (files.items.items.len == 0) {
+    if (files.entries().len == 0) {
         return printNoFiles(io, stdout_file);
     }
 
