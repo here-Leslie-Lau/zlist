@@ -1,11 +1,19 @@
+//! Public API for zlist.
+//!
+//! Import this module with `@import("zlist")`.
+
+const opts = @import("zlist/opts.zig");
+
+/// Metadata for a single file or directory.
 pub const File = @import("zlist/file.zig").File;
+/// A collection of files returned by zlist.
 pub const Files = @import("zlist/files.zig").Files;
 
-pub const FilesOptions = @import("zlist/opts.zig").FilesOptions;
-pub const FileOptions = @import("zlist/opts.zig").FileOptions;
-pub const ModeOptionsComptime = @import("zlist/opts.zig").ModeOptionsComptime;
-pub const PrintMode = @import("zlist/opts.zig").PrintMode;
+pub const FilesOptions = opts.FilesOptions;
+pub const FileOptions = opts.FileOptions;
+pub const ModeOptionsComptime = opts.ModeOptionsComptime;
+pub const PrintMode = opts.PrintMode;
 
-pub const SortType = @import("zlist/opts.zig").SortType;
-pub const SizeRange = @import("zlist/opts.zig").SizeRange;
+pub const SortType = opts.SortType;
+pub const SizeRange = opts.SizeRange;
 pub const GitStatus = @import("zlist/git.zig").GitStatus;
