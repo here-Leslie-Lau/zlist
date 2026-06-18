@@ -14,8 +14,8 @@ pub fn build(b: *std.Build) void {
         .single_threaded = true,
     });
 
-    // import zlist as a module
-    const zlist_mod = b.createModule(.{
+    // expose zlist as a public module for package consumers
+    const zlist_mod = b.addModule("zlist", .{
         .root_source_file = b.path("src/zlist.zig"),
         .target = target,
         .optimize = optimize,
