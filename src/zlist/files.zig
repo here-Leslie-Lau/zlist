@@ -268,20 +268,50 @@ pub const Files = struct {
         self.items.deinit(self.allocator);
     }
 
+    /// Return the collected file entries as a read-only slice.
     pub inline fn entries(self: Self) []const file.File {
         return self.items.items;
     }
 
+    /// Return the longest display width used by simple listing output.
     pub inline fn maxDisplayLen(self: Self) usize {
         return self.max_display_len;
     }
 
+    /// Return whether git status data was loaded for this listing.
     pub inline fn hasGitStatus(self: Self) bool {
         return self.loaded_git;
     }
 
+    /// Return the git status for a file name, if one was loaded.
     pub inline fn gitStatus(self: Self, name: []const u8) ?git.GitStatus {
         return self.git_inventory.get(name);
+    }
+
+    /// Return the options used to create this listing.
+    pub inline fn options(self: Self) opts.FilesOptions {
+        return self.opt;
+    }
+
+    /// Return whether recursive listing should stop at the current level.
+    pub inline fn recursionLimitReached(self: Self) bool {
+        return self.opt.recursion_level > 0 and self.curr_recursion_level > self.opt.recursion_level;
+    }
+
+    /// Return the recursion level to use for a child listing.
+    pub inline fn nextRecursionLevel(self: Self) i8 {
+        return self.curr_recursion_level + 1;
+    }
+
+    /// Set the recursion level for this listing.
+    pub inline fn setRecursionLevel(self: *Self, level: i8) void {
+        self.curr_recursion_level = level;
+    }
+
+    /// Add a child listing's report totals to this listing.
+    pub inline fn addReportTotals(self: *Self, child: Self) void {
+        self.total_folders += child.total_folders;
+        self.total_files += child.total_files;
     }
 
     fn sort(items: []file.File, sort_type: opts.SortType) void {

@@ -221,12 +221,8 @@ pub fn listRecursive(
         try term.writer.print(".\n", .{});
     }
 
-    // Determine if the maximum number of level has been reached.
-    if (files.opt.recursion_level > 0) {
-        if (files.curr_recursion_level > files.opt.recursion_level) {
-            // reached max recursion level
-            return;
-        }
+    if (files.recursionLimitReached()) {
+        return;
     }
 
     const entries = files.entries();
@@ -281,9 +277,9 @@ pub fn listRecursive(
                 sub_arena.allocator(),
                 files.io,
                 sub_dir,
-                files.opt,
+                files.options(),
             );
-            sub_files.curr_recursion_level = files.curr_recursion_level + 1;
+            sub_files.setRecursionLevel(files.nextRecursionLevel());
 
             // recursive itself
             const child_connector = if (is_last) "    " else "│   ";
@@ -298,8 +294,7 @@ pub fn listRecursive(
             try listRecursive(&sub_files, term, prefix_builder.items, false, sub_dir, mode_opt);
 
             // accumulate counts from subdirectories
-            files.total_folders += sub_files.total_folders;
-            files.total_files += sub_files.total_files;
+            files.addReportTotals(sub_files);
         }
     }
 }
