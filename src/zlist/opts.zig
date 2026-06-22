@@ -1,26 +1,5 @@
 const std = @import("std");
 
-/// The print mode of `zl`.
-pub const PrintMode = enum {
-    Detail,
-    DetailPure,
-    DetailWithGit,
-    RecursivePrefix,
-    RecursiveWithFileMeta,
-    RecursiveWithFileMetaPure,
-
-    pub inline fn toString(self: PrintMode) []const u8 {
-        return switch (self) {
-            .Detail => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}",
-            .DetailPure => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s}",
-            .DetailWithGit => "    {c} {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}",
-            .RecursivePrefix => "{s}{s}",
-            .RecursiveWithFileMeta => " {s} {s}\n",
-            .RecursiveWithFileMetaPure => " {s}\n",
-        };
-    }
-};
-
 pub const SortType = enum {
     /// sort by name(asc)
     name,
@@ -46,8 +25,6 @@ pub const FilesOptions = struct {
     show_detail: bool = false,
     /// show hidden files
     show_hidden: bool = false,
-    /// pure mode, only show file names without icons and colors
-    pure: bool = false,
     /// report mode, shows brief report about number of files and folders shown
     report: bool = false,
     /// sort type
@@ -106,16 +83,4 @@ pub const FileOptions = struct {
     size_range: ?SizeRange = null,
     /// timestamp used as the "now" reference for changed-within filtering.
     changed_within_now: ?std.Io.Timestamp = null,
-};
-
-/// The options of `zl` that are determined at compile time.
-pub const ModeOptionsComptime = struct {
-    const Self = @This();
-    pure: bool = false,
-
-    pub inline fn initPure() Self {
-        return comptime Self{
-            .pure = true,
-        };
-    }
 };

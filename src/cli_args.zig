@@ -4,6 +4,7 @@ const zlist = @import("zlist");
 
 pub const CliConfig = struct {
     opt: zlist.FilesOptions,
+    pure: bool,
     paths: []const []const u8,
 };
 
@@ -11,6 +12,7 @@ const default_paths = [_][]const u8{"."};
 
 pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliConfig {
     var opt = zlist.FilesOptions{ .recursion_level = 0 };
+    var pure = false;
     var paths: []const []const u8 = &default_paths;
 
     if (res.args.long != 0) {
@@ -33,7 +35,7 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
     }
 
     if (res.args.pure != 0) {
-        opt.pure = true;
+        pure = true;
     }
 
     if (res.args.report != 0) {
@@ -81,6 +83,7 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
 
     return .{
         .opt = opt,
+        .pure = pure,
         .paths = paths,
     };
 }

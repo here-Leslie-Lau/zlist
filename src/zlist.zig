@@ -11,8 +11,6 @@ pub const Files = @import("zlist/files.zig").Files;
 
 pub const FilesOptions = opts.FilesOptions;
 pub const FileOptions = opts.FileOptions;
-pub const ModeOptionsComptime = opts.ModeOptionsComptime;
-pub const PrintMode = opts.PrintMode;
 
 pub const SortType = opts.SortType;
 pub const SizeRange = opts.SizeRange;

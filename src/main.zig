@@ -87,7 +87,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         var opt = cli.opt;
         opt.path = path;
 
-        runForPath(allocator, io, opt, path, cli.paths.len > 1, index) catch |err| switch (err) {
+        runForPath(allocator, io, opt, path, cli.pure, cli.paths.len > 1, index) catch |err| switch (err) {
             error.FileNotFound => std.debug.print("zl: path not found: {s}\n", .{path}),
             error.NotDir => std.debug.print("zl: not a directory: {s}\n", .{path}),
             else => return err,
@@ -100,6 +100,7 @@ inline fn runForPath(
     io: std.Io,
     opt: zlist.FilesOptions,
     path: []const u8,
+    pure: bool,
     show_header: bool,
     index: usize,
 ) !void {
@@ -119,7 +120,7 @@ inline fn runForPath(
 
     const cwd = std.Io.Dir.cwd();
     const dir = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
-        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, path),
+        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, pure, path),
         error.FileNotFound => {
             std.debug.print("zl: path not found: {s}\n", .{path});
             return;
@@ -128,7 +129,7 @@ inline fn runForPath(
     };
     defer dir.close(io);
 
-    return runForDirectory(allocator, io, stdout_file, opt, dir);
+    return runForDirectory(allocator, io, stdout_file, opt, pure, dir);
 }
 
 inline fn runForDirectory(
@@ -136,12 +137,13 @@ inline fn runForDirectory(
     io: std.Io,
     stdout_file: std.Io.File,
     opt: zlist.FilesOptions,
+    pure: bool,
     dir: std.Io.Dir,
 ) !void {
     var files = try zlist.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, &files, dir);
+    try printFiles(io, stdout_file, opt, pure, &files, dir);
 }
 
 inline fn runForSingleFile(
@@ -149,18 +151,20 @@ inline fn runForSingleFile(
     io: std.Io,
     stdout_file: std.Io.File,
     opt: zlist.FilesOptions,
+    pure: bool,
     path: []const u8,
 ) !void {
     var files = try zlist.Files.initSingle(allocator, io, path, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, &files, null);
+    try printFiles(io, stdout_file, opt, pure, &files, null);
 }
 
 fn printFiles(
     io: std.Io,
     stdout_file: std.Io.File,
     opt: zlist.FilesOptions,
+    pure: bool,
     files: *zlist.Files,
     dir: ?std.Io.Dir,
 ) !void {
@@ -174,26 +178,26 @@ fn printFiles(
 
     if (opt.show_detail) {
         // long format
-        switch (opt.pure) {
+        switch (pure) {
             true => try render.listDetail(files.*, term, .{ .pure = true }),
             false => try render.listDetail(files.*, term, .{ .pure = false }),
         }
     } else if (opt.recursive) {
         // recursive
         if (dir) |opened_dir| {
-            switch (opt.pure) {
+            switch (pure) {
                 true => try render.listRecursive(files, term, "", true, opened_dir, .{ .pure = true }),
                 false => try render.listRecursive(files, term, "", true, opened_dir, .{ .pure = false }),
             }
         } else {
-            switch (opt.pure) {
+            switch (pure) {
                 true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
                 false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
             }
         }
     } else {
         // normal format
-        switch (opt.pure) {
+        switch (pure) {
             true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
             false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
         }

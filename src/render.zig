@@ -3,6 +3,38 @@ const Terminal = std.Io.Terminal;
 
 const zlist = @import("zlist");
 
+/// The render options that are determined at compile time.
+const ModeOptionsComptime = struct {
+    const Self = @This();
+    pure: bool = false,
+
+    pub inline fn initPure() Self {
+        return comptime Self{
+            .pure = true,
+        };
+    }
+};
+
+const PrintMode = enum {
+    Detail,
+    DetailPure,
+    DetailWithGit,
+    RecursivePrefix,
+    RecursiveWithFileMeta,
+    RecursiveWithFileMetaPure,
+
+    pub inline fn toString(self: PrintMode) []const u8 {
+        return switch (self) {
+            .Detail => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}",
+            .DetailPure => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s}",
+            .DetailWithGit => "    {c} {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}",
+            .RecursivePrefix => "{s}{s}",
+            .RecursiveWithFileMeta => " {s} {s}\n",
+            .RecursiveWithFileMetaPure => " {s}\n",
+        };
+    }
+};
+
 const icon_inventory = std.StaticStringMap([]const u8).initComptime(.{
     .{ ".zig", " " },
     .{ ".zon", " " },
@@ -41,7 +73,7 @@ pub fn list(
     files: zlist.Files,
     term: Terminal,
     handle: std.Io.File.Handle,
-    comptime mode_opt: zlist.ModeOptionsComptime,
+    comptime mode_opt: ModeOptionsComptime,
 ) !void {
     const term_width = getTerminalWidth(handle);
     const entries = files.entries();
@@ -148,7 +180,7 @@ pub fn list(
 }
 
 /// list files in detail mode
-pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: zlist.ModeOptionsComptime) !void {
+pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: ModeOptionsComptime) !void {
     var perm_buf: [10]u8 = undefined;
     var size_buf: [32]u8 = undefined;
     var time_buf: [32]u8 = undefined;
@@ -167,7 +199,7 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: zlist.M
 
             try term.setColor(git_color);
             const icon = getIcon(val.is_dir, val.name);
-            try term.writer.print(comptime zlist.PrintMode.DetailWithGit.toString(), .{
+            try term.writer.print(comptime PrintMode.DetailWithGit.toString(), .{
                 git_char,
                 val.getPermissions(&perm_buf),
                 val.username,
@@ -179,7 +211,7 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: zlist.M
             });
         } else {
             if (mode_opt.pure) {
-                try term.writer.print(comptime zlist.PrintMode.DetailPure.toString(), .{
+                try term.writer.print(comptime PrintMode.DetailPure.toString(), .{
                     val.getPermissions(&perm_buf),
                     val.username,
                     val.groupname,
@@ -189,7 +221,7 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: zlist.M
                 });
             } else {
                 const icon = getIcon(val.is_dir, val.name);
-                try term.writer.print(comptime zlist.PrintMode.Detail.toString(), .{
+                try term.writer.print(comptime PrintMode.Detail.toString(), .{
                     val.getPermissions(&perm_buf),
                     val.username,
                     val.groupname,
@@ -215,7 +247,7 @@ pub fn listRecursive(
     prefix: []const u8,
     first: bool,
     dir: std.Io.Dir,
-    comptime mode_opt: zlist.ModeOptionsComptime,
+    comptime mode_opt: ModeOptionsComptime,
 ) !void {
     if (first) {
         try term.writer.print(".\n", .{});
@@ -237,7 +269,7 @@ pub fn listRecursive(
             // set color for prefix and connector
             try term.setColor(Terminal.Color.bright_blue);
         }
-        try term.writer.print(comptime zlist.PrintMode.RecursivePrefix.toString(), .{
+        try term.writer.print(comptime PrintMode.RecursivePrefix.toString(), .{
             prefix,
             connector,
         });
@@ -250,13 +282,13 @@ pub fn listRecursive(
         if (!mode_opt.pure) {
             try term.setColor(getColor(val.is_dir, val.name));
 
-            try term.writer.print(comptime zlist.PrintMode.RecursiveWithFileMeta.toString(), .{
+            try term.writer.print(comptime PrintMode.RecursiveWithFileMeta.toString(), .{
                 getIcon(val.is_dir, val.name),
                 val.name,
             });
         } else {
             // pure mode, no color and no icon
-            try term.writer.print(comptime zlist.PrintMode.RecursiveWithFileMetaPure.toString(), .{val.name});
+            try term.writer.print(comptime PrintMode.RecursiveWithFileMetaPure.toString(), .{val.name});
         }
         if (!mode_opt.pure) {
             try term.setColor(Terminal.Color.reset);
