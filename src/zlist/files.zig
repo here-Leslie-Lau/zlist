@@ -53,13 +53,8 @@ pub const Files = struct {
         else
             null;
 
-        // initialize inventory if show_detail is true, otherwise leave them as undefined to save memory.
-        var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
-        var groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8) = undefined;
-        if (opt.show_detail) {
-            username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
-            groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
-        }
+        var username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
+        var groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
 
         var it = dir.iterate();
         while (try it.next(io)) |entry| {
@@ -125,7 +120,7 @@ pub const Files = struct {
         }
 
         var loaded_git = false;
-        var git_inventory: std.StringHashMap(git.GitStatus) = undefined;
+        var git_inventory = std.StringHashMap(git.GitStatus).init(allocator);
         // git integration is enabled, and current directory is a git repository
         if (opt.show_git and git.isGitRepo(allocator, io, opt.path)) {
             // load git status inventory
@@ -184,12 +179,8 @@ pub const Files = struct {
         else
             null;
 
-        var username_inventory: std.AutoHashMap(std.c.uid_t, []const u8) = undefined;
-        var groupname_inventory: std.AutoHashMap(std.c.gid_t, []const u8) = undefined;
-        if (opt.show_detail) {
-            username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
-            groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
-        }
+        var username_inventory = std.AutoHashMap(std.c.uid_t, []const u8).init(allocator);
+        var groupname_inventory = std.AutoHashMap(std.c.gid_t, []const u8).init(allocator);
 
         if (try file.File.init(
             allocator,
@@ -234,7 +225,7 @@ pub const Files = struct {
         }
 
         var loaded_git = false;
-        var git_inventory: std.StringHashMap(git.GitStatus) = undefined;
+        var git_inventory = std.StringHashMap(git.GitStatus).init(allocator);
         if (opt.show_git and git.isGitRepo(allocator, io, parent_path)) {
             git_inventory = try git.getFileStatuses(allocator, io, parent_path);
             loaded_git = true;
@@ -285,6 +276,7 @@ pub const Files = struct {
 
     /// Return the git status for a file name, if one was loaded.
     pub inline fn gitStatus(self: Self, name: []const u8) ?git.GitStatus {
+        if (!self.loaded_git) return null;
         return self.git_inventory.get(name);
     }
 
