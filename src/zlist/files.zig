@@ -256,7 +256,35 @@ pub const Files = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        // Each File owns its copied name and optional symlink target.
+        for (self.items.items) |item| {
+            self.allocator.free(item.name);
+            if (item.symlink_target) |target| {
+                self.allocator.free(target);
+            }
+        }
+
+        // Owner names are shared through caches, so free each cached value once.
+        var usernames = self.username_inventory.valueIterator();
+        while (usernames.next()) |username| {
+            self.allocator.free(username.*);
+        }
+
+        var groupnames = self.groupname_inventory.valueIterator();
+        while (groupnames.next()) |groupname| {
+            self.allocator.free(groupname.*);
+        }
+
+        // Git status keys are duplicated when the inventory is loaded.
+        var git_names = self.git_inventory.keyIterator();
+        while (git_names.next()) |name| {
+            self.allocator.free(name.*);
+        }
+
         self.items.deinit(self.allocator);
+        self.username_inventory.deinit();
+        self.groupname_inventory.deinit();
+        self.git_inventory.deinit();
     }
 
     /// Return the collected file entries as a read-only slice.
