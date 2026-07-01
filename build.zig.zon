@@ -5,8 +5,15 @@
         .clap = .{
             .url = "git+https://github.com/Hejsil/zig-clap#e91d66b1abba2024cd2e816426f14d233d3dad9a",
             .hash = "clap-0.12.0-oBajB2LpAQD1BQpAukHcuwhIUoHWYNy2DzU6lDW2v2N8",
+            .lazy = true,
         },
     },
-    .paths = .{""},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "src/zlist.zig",
+        "src/zlist",
+    },
     .fingerprint = 0x10cc28778dc796fb,
 }
