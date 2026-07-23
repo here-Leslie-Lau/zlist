@@ -340,7 +340,7 @@ pub const File = struct {
                 };
 
                 // std.Io.File.Permissions representation (same as unix mode bits)
-                const permissions: std.Io.File.Permissions = @enumFromInt(m & 0o7777);
+                const permissions: std.Io.File.Permissions = @fromBackingInt(@intCast(m & 0o7777));
 
                 return .{
                     .size = statx.size,
@@ -379,7 +379,7 @@ pub const File = struct {
                     else => std.Io.File.Kind.file,
                 };
 
-                const permissions: std.Io.File.Permissions = @enumFromInt(m & 0o7777);
+                const permissions: std.Io.File.Permissions = @fromBackingInt(@intCast(m & 0o7777));
 
                 return .{
                     .size = @intCast(buf.size),
@@ -416,7 +416,7 @@ pub const File = struct {
             // TODO leslie: todo
         } else {
             // posix permissions
-            const m = @intFromEnum(self.stat_t.?.permissions);
+            const m = @backingInt(self.stat_t.?.permissions);
             // User
             buf[1] = if (m & S_IRUSR != 0) 'r' else '-';
             buf[2] = if (m & S_IWUSR != 0) 'w' else '-';

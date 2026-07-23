@@ -207,15 +207,18 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: ModeOpt
 
     const show_git = files.hasGitStatus() and !mode_opt.pure;
 
+    // calculate column widths
     const git_len: usize = if (view_opt.header) 3 else 1;
     var user_len: usize = if (view_opt.header) 4 else 0;
     var group_len: usize = if (view_opt.header) 5 else 0;
+    var size_len: usize = 4;
     var time_len: usize = if (view_opt.header) 4 else 0;
 
     for (files.entries()) |val| {
-        user_len = @max(user_len, val.username.len);
-        group_len = @max(group_len, val.groupname.len);
-        time_len = @max(time_len, (try val.formatTime(&time_buf)).len);
+        if (view_opt.show_user) user_len = @max(user_len, val.username.len);
+        if (view_opt.show_group) group_len = @max(group_len, val.groupname.len);
+        if (view_opt.show_size) size_len = @max(size_len, (try val.humanSize(&size_buf)).len);
+        if (view_opt.show_time) time_len = @max(time_len, (try val.formatTime(&time_buf)).len);
     }
 
     if (view_opt.header) {
@@ -223,7 +226,7 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: ModeOpt
         if (view_opt.show_permissions) try term.writer.print("Permissions ", .{});
         if (view_opt.show_user) try term.writer.print("{s:<[1]} ", .{ "User", user_len });
         if (view_opt.show_group) try term.writer.print("{s:<[1]} ", .{ "Group", group_len });
-        if (view_opt.show_size) try term.writer.print("Size ", .{});
+        if (view_opt.show_size) try term.writer.print("{s:>[1]} ", .{ "Size", size_len });
         if (view_opt.show_time) try term.writer.print("{s:<[1]} ", .{ "Time", time_len });
         try term.writer.print("Name\n", .{});
     }
@@ -243,7 +246,7 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: ModeOpt
         if (view_opt.show_permissions) try term.writer.print("{s:<11} ", .{val.getPermissions(&perm_buf)});
         if (view_opt.show_user) try term.writer.print("{s:<[1]} ", .{ val.username, user_len });
         if (view_opt.show_group) try term.writer.print("{s:<[1]} ", .{ val.groupname, group_len });
-        if (view_opt.show_size) try term.writer.print("{s:>4} ", .{try val.humanSize(&size_buf)});
+        if (view_opt.show_size) try term.writer.print("{s:>[1]} ", .{ try val.humanSize(&size_buf), size_len });
         if (view_opt.show_time) try term.writer.print("{s:>[1]} ", .{ try val.formatTime(&time_buf), time_len });
         if (view_opt.show_icon and !mode_opt.pure) try term.writer.print("{s}", .{getIcon(val.is_dir, val.name)});
         try term.writer.print("{s}", .{try val.formatLongDisplayName(&display_name_buf)});
@@ -443,37 +446,55 @@ inline fn getGitStatusColor(files: zlist.Files, name: []const u8) Terminal.Color
     };
 }
 
-test "get_detail" {
+test "detail size column expands to fit its widest value" {
     const io = std.testing.io;
 
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
-    try tmp_dir.dir.writeFile(io, .{ .sub_path = "test1.txt", .data = "hello 1" });
-    try tmp_dir.dir.writeFile(io, .{ .sub_path = "test2.txt", .data = "hello 2" });
 
-    try tmp_dir.dir.createDirPath(io, "sub_dir");
+    var wide_data: [1004]u8 = undefined;
+    @memset(&wide_data, 0);
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "small.txt", .data = "123" });
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "wide.txt", .data = &wide_data });
 
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
-    const allocator = arena.allocator();
-
-    // stdout
-    var stdout_buf: [4096]u8 = undefined;
-    const stdout_file = std.Io.File.stdout();
-    var stdout_writer = stdout_file.writer(io, &stdout_buf);
 
     var files = try zlist.Files.init(
-        allocator,
+        arena.allocator(),
         io,
         tmp_dir.dir,
         .{ .show_detail = true },
     );
     defer files.deinit();
 
-    const term = try getTerminal(io, &stdout_writer.interface, stdout_file);
+    var output_buf: [4096]u8 = undefined;
+    var output_writer: std.Io.Writer = .fixed(&output_buf);
+    const term = Terminal{ .writer = &output_writer, .mode = .no_color };
 
-    try listDetail(files, term, .{ .pure = false });
-    try stdout_writer.interface.flush();
+    const view_opt = LongViewOptions{
+        .show_permissions = false,
+        .show_user = false,
+        .show_group = false,
+        .show_time = false,
+        .show_icon = false,
+    };
+    try listDetail(files, term, .{ .pure = true }, view_opt);
+
+    try std.testing.expectEqualStrings(
+        "   3B small.txt\n1004B wide.txt\n",
+        output_writer.buffered(),
+    );
+
+    output_writer = .fixed(&output_buf);
+    var header_view_opt = view_opt;
+    header_view_opt.header = true;
+    try listDetail(files, term, .{ .pure = true }, header_view_opt);
+
+    try std.testing.expectEqualStrings(
+        " Size Name\n   3B small.txt\n1004B wide.txt\n",
+        output_writer.buffered(),
+    );
 }
 
 test "recursive" {
