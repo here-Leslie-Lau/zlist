@@ -7,6 +7,16 @@ const opts = @import("opts.zig");
 
 const size_units = [_][]const u8{ "B", "K", "M", "G", "T" };
 const month_names = [_][]const u8{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+/// ~6 months in seconds (6 * 30 days). Recent files show time; older files show year.
+const six_months_secs: i64 = 180 * std.time.s_per_day;
+
+/// Current wall-clock seconds since epoch. Windows falls back to 0 (stat is unsupported there).
+inline fn wallSeconds() i64 {
+    if (builtin.os.tag == .windows) return 0;
+    var ts: std.c.timespec = undefined;
+    if (std.c.clock_gettime(.REALTIME, &ts) != 0) return 0;
+    return ts.sec;
+}
 
 // Date calculation algorithm developed by Neri/Schneider (2021): https://arxiv.org/abs/2102.06959v1
 // Originally written in C++ version (https://github.com/cassioneri/calendar) of the
@@ -24,7 +34,7 @@ const S: u32 = 82;
 const K: u32 = 719468 + 146097 * S;
 const L: u32 = 400 * S;
 
-fn rdToDateCpp(N_U: i32) Date {
+inline fn rdToDateCpp(N_U: i32) Date {
     // Rata die shift
     const N: u32 = @as(u32, @bitCast(N_U)) +% K;
 
@@ -516,9 +526,11 @@ pub const File = struct {
         return std.fmt.bufPrint(buf, "{d}{s}", .{ size, size_units[i] });
     }
 
-    /// format modification time to string
+    /// Format modification time for long view.
+    /// Within ~6 months: "09 Jul 18:21"; older: "09 Jul  2025".
     pub inline fn formatTime(self: Self, buf: []u8) ![]u8 {
-        const epoch_seconds: u64 = @as(u64, @bitCast(self.stat_t.?.mtime.toSeconds()));
+        const mtime_secs = self.stat_t.?.mtime.toSeconds();
+        const epoch_seconds: u64 = @intCast(@max(mtime_secs, 0));
         const epoch_day = epoch_seconds / 86_400;
         // Date calculated by the Neri/Schneider algorithm
         const date = rdToDateCpp(@intCast(epoch_day));
@@ -526,17 +538,20 @@ pub const File = struct {
         // Leftover seconds used to calculate the day-time
         const day_leftover_sec = epoch_seconds % 86_400;
         const hour = day_leftover_sec / 3600;
-        const hour_leftover_sec = day_leftover_sec % 3600;
-        const min = hour_leftover_sec / 60;
-        const sec = hour_leftover_sec % 60;
+        const min = (day_leftover_sec % 3600) / 60;
 
-        //  %b %d %H:%M:%S %Y in C Language
-        return std.fmt.bufPrint(buf, "{s} {d:0>2} {d:0>2}:{d:0>2}:{d:0>2} UTC {d}", .{
-            month_names[date.month - 1],
+        // Recent enough: day mon HH:MM. Older: day mon  YYYY (double space keeps width aligned).
+        if (wallSeconds() - mtime_secs < six_months_secs) {
+            return std.fmt.bufPrint(buf, "{d:0>2} {s} {d:0>2}:{d:0>2}", .{
+                date.day,
+                month_names[date.month - 1],
+                hour,
+                min,
+            });
+        }
+        return std.fmt.bufPrint(buf, "{d:0>2} {s}  {d}", .{
             date.day,
-            hour,
-            min,
-            sec,
+            month_names[date.month - 1],
             date.year,
         });
     }
