@@ -219,29 +219,27 @@ For options, ownership rules, and more examples, see [Using zlist as a module](d
 
 `hyperfine` on macOS (Apple M4). Build: `zig build -Doptimize=ReleaseFast`.
 
-Commands (same flags every run):
+Trying to keep the comparison fair — colored grid-style listing on all three:
 
 ```bash
 zl <dir>
-eza -l --icons never --color never <dir>
-lsd -l --icon never --color never <dir>
+eza --icons always --color always --grid <dir>
+lsd --color always <dir>
 ```
 
-Dirs were throwaway folders with `n` tiny text files each (`file_0.txt` …).
+Each `<dir>` was a throwaway folder with `n` small text files (`file_0.txt` …).
 
 | Tool | n=50 | n=500 | n=5000 | n=50000 |
 | :--- | :--- | :--- | :--- | :--- |
-| `zl` | `836 µs ± 409 µs` [U 471µs / S 191µs] | `1.9 ms ± 0.4 ms` [U 0.9 / S 0.6] | `5.8 ms ± 0.3 ms` [U 3.4 / S 2.0] | `49.6 ms ± 0.7 ms` [U 32.1 / S 16.7] |
-| `eza` | `5.2 ms ± 0.5 ms` [U 3.1 / S 6.7] | `12.8 ms ± 0.3 ms` [U 6.2 / S 54.8] | `79.3 ms ± 0.7 ms` [U 34.0 / S 516] | `864 ms ± 25 ms` [U 305 / S 5966] |
-| `lsd` | `6.3 ms ± 0.6 ms` [U 2.3 / S 2.2] | `17.3 ms ± 1.0 ms` [U 4.6 / S 10.6] | `123 ms ± 2.4 ms` [U 22.8 / S 97.0] | `1.311 s ± 0.017 s` [U 0.20 / S 1.11] |
+| `zl` | `1.2 ms ± 0.4 ms` [U 0.6 / S 0.4] | `1.7 ms ± 0.6 ms` [U 0.9 / S 0.6] | `5.9 ms ± 0.6 ms` [U 3.3 / S 2.0] | `49.9 ms ± 1.4 ms` [U 32.2 / S 16.8] |
+| `eza` | `3.7 ms ± 0.2 ms` [U 2.3 / S 0.9] | `5.6 ms ± 0.8 ms` [U 3.4 / S 1.9] | `21.2 ms ± 0.6 ms` [U 11.6 / S 8.9] | `176 ms ± 4.4 ms` [U 107 / S 66.9] |
+| `lsd` | `3.6 ms ± 0.5 ms` [U 1.6 / S 1.6] | `13.5 ms ± 2.9 ms` [U 2.9 / S 9.9] | `112 ms ± 1.9 ms` [U 13.5 / S 97.2] | `1.293 s ± 0.057 s` [U 0.12 / S 1.16] |
 
-A few notes:
+`zl` wins every column here. Gap vs `lsd` blows up on big dirs; vs `eza` it's a steadier ~3×. Still plenty of CPU left on the table at 50k (`zl` user time ~32ms) if we want to push further.
 
-- This is **not** an apples-to-apples feature match. `zl` is the default grid listing; `eza`/`lsd` are forced into long mode (`-l`) with icons/color off. Long mode does a lot more `stat` work, which is why those two climb hard as `n` grows.
-- An older table in this README had `eza` stuck around ~3ms even at 50k. That almost certainly wasn’t the same setup (likely no `-l`, or a messy run on my side). Treat that number as wrong and use this one.
-- `zl` still wins handily here, but the gap is partly “cheap default path vs paid long listing.” Don’t read it as “zl is 20× faster at the same job.”
+Older README numbers had `eza` stuck near ~3ms even at 50k — that was a bad run on my side (wrong flags / sloppy setup). Ignore those; this table replaces them.
 
-Numbers move with disk cache, load, and FS. Your machine will differ.
+Numbers move with cache, load, and FS. YMMV.
 
 <a id="roadmap"></a>
 ## Roadmap
