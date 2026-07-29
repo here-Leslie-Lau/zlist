@@ -16,3 +16,8 @@ pub const DirGrouping = opts.DirGrouping;
 pub const SortType = opts.SortType;
 pub const SizeRange = opts.SizeRange;
 pub const GitStatus = @import("zlist/git.zig").GitStatus;
+
+// Keep internal helpers in the test graph without exporting them.
+test {
+    _ = @import("zlist/name_pool.zig");
+}
