@@ -4,6 +4,7 @@ const testing = std.testing;
 
 const file = @import("file.zig");
 const git = @import("git.zig");
+const name_pool_mod = @import("name_pool.zig");
 const opts = @import("opts.zig");
 
 pub const Files = struct {
@@ -17,6 +18,9 @@ pub const Files = struct {
     opt: opts.FilesOptions,
     total_folders: usize = 0,
     total_files: usize = 0,
+
+    /// Entry names live here; free via `name_pool.deinit`, not per-file.
+    name_pool: name_pool_mod.NamePool,
 
     /// for caching username and groupname, key is uid/gid, value is username/groupname.
     /// since getting username from uid is a costly operation, we can cache it to improve performance.
@@ -34,6 +38,9 @@ pub const Files = struct {
         dir: std.Io.Dir,
         opt: opts.FilesOptions,
     ) !Self {
+        var name_pool = try name_pool_mod.NamePool.init(allocator);
+        errdefer name_pool.deinit();
+
         var files = try std.ArrayList(file.File).initCapacity(allocator, 32);
         errdefer {
             deinitItems(allocator, files.items);
@@ -94,10 +101,7 @@ pub const Files = struct {
             )) orelse continue;
             errdefer if (fs.symlink_target) |target| allocator.free(target);
 
-            // copy name
-            const name = try allocator.dupe(u8, entry.name);
-            errdefer allocator.free(name);
-            fs.name = name;
+            fs.name = try name_pool.store(entry.name);
 
             if (!opt.show_detail and !opt.recursive) {
                 // get display length of the name, including icon(len is 2), just in normal mode
@@ -147,6 +151,7 @@ pub const Files = struct {
             .io = io,
             .items = files,
             .opt = opt,
+            .name_pool = name_pool,
             .username_inventory = username_inventory,
             .groupname_inventory = groupname_inventory,
             .loaded_git = loaded_git,
@@ -173,6 +178,9 @@ pub const Files = struct {
             .kind = stat.kind,
             .inode = 0,
         };
+
+        var name_pool = try name_pool_mod.NamePool.init(allocator);
+        errdefer name_pool.deinit();
 
         var files = try std.ArrayList(file.File).initCapacity(allocator, 1);
         errdefer {
@@ -228,9 +236,7 @@ pub const Files = struct {
             var item = single_file;
             errdefer if (item.symlink_target) |target| allocator.free(target);
 
-            const name = try allocator.dupe(u8, base_name);
-            errdefer allocator.free(name);
-            item.name = name;
+            item.name = try name_pool.store(base_name);
 
             if (!opt.show_detail and !opt.recursive) {
                 max_len = item.name.len + 2;
@@ -260,6 +266,7 @@ pub const Files = struct {
             .io = io,
             .items = files,
             .opt = opt,
+            .name_pool = name_pool,
             .username_inventory = username_inventory,
             .groupname_inventory = groupname_inventory,
             .loaded_git = loaded_git,
@@ -279,17 +286,16 @@ pub const Files = struct {
     pub fn deinit(self: *Self) void {
         deinitItems(self.allocator, self.items.items);
         self.items.deinit(self.allocator);
+        self.name_pool.deinit();
 
         deinitCachedNames(std.c.uid_t, self.allocator, &self.username_inventory);
         deinitCachedNames(std.c.gid_t, self.allocator, &self.groupname_inventory);
         deinitGitInventory(self.allocator, &self.git_inventory);
     }
 
-    /// Free owned data stored by each File entry.
+    /// Free per-entry owned data. Names live in `name_pool` and are not freed here.
     inline fn deinitItems(allocator: mem.Allocator, items: []file.File) void {
-        // Each File owns its copied name and optional symlink target.
         for (items) |item| {
-            allocator.free(item.name);
             if (item.symlink_target) |target| {
                 allocator.free(target);
             }
