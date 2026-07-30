@@ -89,6 +89,7 @@ inline fn formatExecPermission(mode: u32, exec_bit: u16, special_bit: u16, speci
 pub const File = struct {
     const Self = @This();
     is_dir: bool,
+    is_symlink_to_dir: bool,
     is_exec: bool,
     is_hidden: bool,
     name: []const u8,
@@ -111,6 +112,7 @@ pub const File = struct {
         groupname_inventory: *std.AutoHashMap(std.c.gid_t, []const u8),
     ) !?Self {
         const is_dir: bool = (entry.kind == .directory);
+        const is_symlink_to_dir: bool = (try dir.statFile(io, entry.name, .{})).kind == .directory;
         const is_hidden: bool = (entry.name[0] == '.');
 
         if (!opt.show_hidden and is_hidden) {
@@ -140,6 +142,7 @@ pub const File = struct {
         var file: Self = .{
             .is_hidden = is_hidden,
             .is_dir = is_dir,
+            .is_symlink_to_dir = is_symlink_to_dir,
             .is_exec = false,
             .name = entry.name,
             .stat_t = null,
@@ -301,6 +304,7 @@ pub const File = struct {
     pub inline fn statForName(name: []const u8, dir: *const std.Io.Dir) ?Stat {
         const temp_file = Self{
             .is_dir = false,
+            .is_symlink_to_dir = false,
             .is_exec = false,
             .is_hidden = false,
             .name = name,

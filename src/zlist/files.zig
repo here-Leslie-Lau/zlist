@@ -141,7 +141,7 @@ pub const Files = struct {
             loaded_git = true;
         }
 
-        sort(files.items, opt.dir_grouping, opt.sort_type, opt.reverse, io, dir);
+        sort(files.items, opt.dir_grouping, opt.sort_type, opt.reverse);
 
         return .{
             .max_display_len = max_len,
@@ -373,13 +373,11 @@ pub const Files = struct {
         sort_type: opts.SortType,
         dir_grouping: opts.DirGrouping,
         reverse: bool,
-        io: std.Io,
-        dir: std.Io.Dir,
 
         fn lessThan(ctx: SortCtx, a: file.File, b: file.File) bool {
             if (ctx.dir_grouping != .none) {
-                const a_is_dir = if (a.symlink_target) |target| isDir(target, ctx.io, ctx.dir) else a.is_dir;
-                const b_is_dir = if (b.symlink_target) |target| isDir(target, ctx.io, ctx.dir) else b.is_dir;
+                const a_is_dir = a.is_dir or a.is_symlink_to_dir;
+                const b_is_dir = b.is_dir or b.is_symlink_to_dir;
                 if (a_is_dir != b_is_dir) return a_is_dir == (ctx.dir_grouping == .before);
             }
 
@@ -399,7 +397,7 @@ pub const Files = struct {
         }
     };
 
-    fn sort(items: []file.File, dir_grouping: opts.DirGrouping, sort_type: opts.SortType, reverse: bool, io: std.Io, dir: std.Io.Dir) void {
+    fn sort(items: []file.File, dir_grouping: opts.DirGrouping, sort_type: opts.SortType, reverse: bool) void {
         mem.sortUnstable(
             file.File,
             items,
@@ -407,8 +405,6 @@ pub const Files = struct {
                 .dir_grouping = dir_grouping,
                 .sort_type = sort_type,
                 .reverse = reverse,
-                .io = io,
-                .dir = dir,
             },
             SortCtx.lessThan,
         );
