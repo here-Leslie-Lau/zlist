@@ -48,7 +48,7 @@ const PrintMode = enum {
             .DetailPure => "  {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s}",
             .DetailWithGit => "    {c} {s:<11} {s:<8} {s:<8} {s:<8} {s:<8}  {s} {s}",
             .RecursivePrefix => "{s}{s}",
-            .RecursiveWithFileMeta => " {s} {s}\n",
+            .RecursiveWithFileMeta => " {s}{s}\n",
             .RecursiveWithFileMetaPure => " {s}\n",
         };
     }
@@ -135,8 +135,8 @@ pub fn list(
                 if (idx >= total_items) continue;
 
                 const item = entries[idx];
-                // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) + 1 space = 5.
-                const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 5;
+                // visual length: pure mode has 2 space prefix. normal mode has 2 space + icon(2) = 4.
+                const item_len = if (mode_opt.pure) item.name.len + 2 else item.name.len + 4;
 
                 if (item_len > col_widths[c]) {
                     col_widths[c] = item_len;
@@ -144,7 +144,7 @@ pub fn list(
             }
             total_width += col_widths[c];
             if (c < current_cols - 1) {
-                total_width += 2; // 2 spaces between columns
+                total_width += 1; // 1 space between columns
             }
 
             if (total_width > term_width) {
@@ -163,7 +163,7 @@ pub fn list(
 
     if (optimal_cols == 1) {
         optimal_rows = total_items;
-        final_col_widths[0] = files.maxDisplayLen() + (if (mode_opt.pure) 2 else 5);
+        final_col_widths[0] = files.maxDisplayLen() + (if (mode_opt.pure) 2 else 4);
     }
 
     for (0..optimal_rows) |r| {
@@ -172,7 +172,7 @@ pub fn list(
             if (idx >= total_items) continue;
 
             const val = entries[idx];
-            const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 5;
+            const item_len = if (mode_opt.pure) val.name.len + 2 else val.name.len + 4;
 
             // Print prefix, icon and name
             if (!mode_opt.pure) {
@@ -180,7 +180,7 @@ pub fn list(
                 try term.writer.print("  ", .{});
 
                 try term.setColor(getColor(val.is_dir, val.name));
-                try term.writer.print("{s} {s}", .{ icon, val.name });
+                try term.writer.print("{s}{s}", .{ icon, val.name });
                 try term.setColor(Terminal.Color.reset);
             } else {
                 try term.writer.print("  {s}", .{val.name});
@@ -188,7 +188,7 @@ pub fn list(
 
             // Print padding
             if (c < optimal_cols - 1) {
-                const padding = final_col_widths[c] - item_len + 2; // +2 for inter-column space
+                const padding = final_col_widths[c] - item_len + 1; // +1 for inter-column space
                 for (0..padding) |_| {
                     try term.writer.print(" ", .{});
                 }
@@ -274,7 +274,7 @@ pub fn listRecursive(
             .dot => try term.writer.print(".\n", .{}),
             .name => {
                 try term.setColor(getColor(true, root_dir));
-                try term.writer.print("{s} {s}\n", .{ getIcon(true, root_dir), root_dir });
+                try term.writer.print("{s}{s}\n", .{ getIcon(true, root_dir), root_dir });
                 try term.setColor(Terminal.Color.reset);
             },
             .none => {},
