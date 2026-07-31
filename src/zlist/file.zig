@@ -112,7 +112,6 @@ pub const File = struct {
         groupname_inventory: *std.AutoHashMap(std.c.gid_t, []const u8),
     ) !?Self {
         const is_dir: bool = (entry.kind == .directory);
-        const is_symlink_to_dir: bool = (try dir.statFile(io, entry.name, .{})).kind == .directory;
         const is_hidden: bool = (entry.name[0] == '.');
 
         if (!opt.show_hidden and is_hidden) {
@@ -138,6 +137,13 @@ pub const File = struct {
                 return null;
             }
         }
+
+        // Only resolve symlink targets when directory grouping needs it.
+        // Real directories already set is_dir; plain files never point to dirs.
+        const is_symlink_to_dir = if (opt.resolve_symlink_dir and entry.kind == .sym_link) blk: {
+            const stat = dir.statFile(io, entry.name, .{}) catch break :blk false;
+            break :blk stat.kind == .directory;
+        } else false;
 
         var file: Self = .{
             .is_hidden = is_hidden,

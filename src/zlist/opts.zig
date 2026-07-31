@@ -72,6 +72,8 @@ pub const FileOptions = struct {
     load_stat: bool = false,
     /// load symbolic link target text for display in long mode only.
     load_symlink_target: bool = false,
+    /// resolve whether a symlink points to a directory (needed by dir grouping only).
+    resolve_symlink_dir: bool = false,
     /// load owner/group names from uid/gid (needed by detail mode only).
     load_owner: bool = false,
     /// show hidden files

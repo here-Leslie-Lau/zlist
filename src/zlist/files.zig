@@ -83,6 +83,7 @@ pub const Files = struct {
                 .{
                     .load_stat = load_stat,
                     .load_symlink_target = opt.show_detail,
+                    .resolve_symlink_dir = opt.dir_grouping != .none,
                     .load_owner = opt.show_detail,
                     .show_hidden = opt.show_hidden,
                     .only_dir = opt.only_dir,
@@ -217,6 +218,7 @@ pub const Files = struct {
             .{
                 .load_stat = load_stat,
                 .load_symlink_target = opt.show_detail,
+                .resolve_symlink_dir = opt.dir_grouping != .none,
                 .load_owner = opt.show_detail,
                 .show_hidden = opt.show_hidden,
                 .only_dir = opt.only_dir,
@@ -389,11 +391,6 @@ pub const Files = struct {
             };
 
             return if (ctx.reverse) !res else res;
-        }
-
-        fn isDir(path: []const u8, io: std.Io, dir: std.Io.Dir) bool {
-            const stat = dir.statFile(io, path, .{}) catch return false;
-            return stat.kind == .directory;
         }
     };
 
