@@ -12,6 +12,8 @@ pub const CliConfig = struct {
     root_display: render.RootDisplay,
     pure: bool,
     color_use: render.ColorUse,
+    /// From `-C/--config`. Null keeps built-in defaults.
+    config_path: ?[]const u8 = null,
     paths: []const []const u8,
 };
 
@@ -117,6 +119,7 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
         .root_display = root_display,
         .pure = pure,
         .color_use = color_use,
+        .config_path = res.args.config,
         .paths = paths,
     };
 }
