@@ -3,6 +3,7 @@ const std = @import("std");
 const clap = @import("clap");
 const zlist = @import("zlist");
 
+const cfg = @import("cfg.zig");
 const cli_args = @import("cli_args.zig");
 const render = @import("render.zig");
 
@@ -37,6 +38,7 @@ const params_desc: []const u8 = blk: {
     \\-g, --git                        Show git status in long view.
     \\-e, --ext <str>...               Filter by extension (e.g. --ext zig,md,ts).
     \\-m, --match <str>...             Filter names by substring (e.g. --match main,readme).
+    \\-C, --config <str>               Load config from a .zon file.
     \\<str>...
     \\
     ;
@@ -102,6 +104,16 @@ pub fn main(init: std.process.Init.Minimal) !void {
         },
         else => return err,
     };
+
+    const config = cfg.load(allocator, io, cli.config_path) catch |err| {
+        if (cli.config_path) |config_path| {
+            std.debug.print("zl: failed to load config '{s}': {s}\n", .{ config_path, @errorName(err) });
+        } else {
+            std.debug.print("zl: failed to load config: {s}\n", .{@errorName(err)});
+        }
+        return;
+    };
+    _ = config;
 
     for (cli.paths, 0..) |path, index| {
         var opt = cli.opt;
@@ -283,6 +295,7 @@ fn printConflictingSizeRange() void {
 test {
     _ = @import("zlist");
     _ = @import("render.zig");
+    _ = @import("cfg.zig");
 
     std.testing.refAllDecls(@This());
 }
