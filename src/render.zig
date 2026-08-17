@@ -34,6 +34,12 @@ pub const RootDisplay = enum {
     none,
 };
 
+pub const ColorUse = enum {
+    auto,
+    always,
+    never,
+};
+
 const PrintMode = enum {
     Detail,
     DetailPure,
@@ -93,6 +99,7 @@ pub fn list(
     term: Terminal,
     handle: std.Io.File.Handle,
     comptime mode_opt: ModeOptionsComptime,
+    color_use: ColorUse,
 ) !void {
     const term_width = getTerminalWidth(handle);
     const entries = files.entries();
@@ -179,7 +186,7 @@ pub fn list(
                 const icon = getIcon(val.is_dir, val.name);
                 try term.writer.print("  ", .{});
 
-                try term.setColor(getColor(val.is_dir, val.name));
+                try term.setColor(getColor(val.is_dir, val.name, color_use));
                 try term.writer.print("{s}{s}", .{ icon, val.name });
                 try term.setColor(Terminal.Color.reset);
             } else {
@@ -199,7 +206,13 @@ pub fn list(
 }
 
 /// list files in detail mode
-pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: ModeOptionsComptime, view_opt: LongViewOptions) !void {
+pub fn listDetail(
+    files: zlist.Files,
+    term: Terminal,
+    comptime mode_opt: ModeOptionsComptime,
+    view_opt: LongViewOptions,
+    color_use: ColorUse,
+) !void {
     var perm_buf: [10]u8 = undefined;
     var size_buf: [32]u8 = undefined;
     var time_buf: [32]u8 = undefined;
@@ -233,7 +246,7 @@ pub fn listDetail(files: zlist.Files, term: Terminal, comptime mode_opt: ModeOpt
 
     for (files.entries()) |val| {
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.name));
+            try term.setColor(getColor(val.is_dir, val.name, color_use));
         }
 
         if (show_git) {
@@ -268,12 +281,13 @@ pub fn listRecursive(
     dir: std.Io.Dir,
     comptime mode_opt: ModeOptionsComptime,
     root_display: RootDisplay,
+    color_use: ColorUse,
 ) !void {
     if (first) {
         switch (root_display) {
             .dot => try term.writer.print(".\n", .{}),
             .name => {
-                try term.setColor(getColor(true, root_dir));
+                try term.setColor(getColor(true, root_dir, color_use));
                 try term.writer.print("{s}{s}\n", .{ getIcon(true, root_dir), root_dir });
                 try term.setColor(Terminal.Color.reset);
             },
@@ -308,7 +322,7 @@ pub fn listRecursive(
 
         // print file/directory name
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.name));
+            try term.setColor(getColor(val.is_dir, val.name, color_use));
 
             try term.writer.print(comptime PrintMode.RecursiveWithFileMeta.toString(), .{
                 getIcon(val.is_dir, val.name),
@@ -351,7 +365,7 @@ pub fn listRecursive(
             try prefix_builder.appendSlice(files.allocator, prefix);
             try prefix_builder.appendSlice(files.allocator, child_connector);
 
-            try listRecursive(root_dir, &sub_files, term, prefix_builder.items, false, sub_dir, mode_opt, root_display);
+            try listRecursive(root_dir, &sub_files, term, prefix_builder.items, false, sub_dir, mode_opt, root_display, color_use);
 
             // accumulate counts from subdirectories
             files.addReportTotals(sub_files);
@@ -406,7 +420,9 @@ inline fn getIcon(is_dir: bool, name: []const u8) []const u8 {
     return " ";
 }
 
-inline fn getColor(is_dir: bool, name: []const u8) Terminal.Color {
+inline fn getColor(is_dir: bool, name: []const u8, color_use: ColorUse) Terminal.Color {
+    if (color_use == .never) return Terminal.Color.reset;
+
     if (is_dir) {
         return Terminal.Color.bright_blue;
     }
