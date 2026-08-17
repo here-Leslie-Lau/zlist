@@ -151,6 +151,9 @@ $ zl --help
     -p, --pure
             Show names only, without colors or icons.
 
+        --color <COLORUSE>
+            When to use terminal colors. Default: auto. OPTIONS: auto, always, never.
+
     -R, --report
             Show a short summary of files and folders.
 

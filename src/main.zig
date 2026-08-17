@@ -30,6 +30,7 @@ const params_desc: []const u8 = blk: {
     \\-L, --level <INT>                Limit recursion depth. 0 means no limit.
     \\    --root-display <ROOTDISPLAY> Changes how root dir is displayed in recursive view. Default: dot. OPTIONS: dot, name, none.
     \\-p, --pure                       Show names only, without colors or icons.
+    \\    --color <COLORUSE>           When to use terminal colors. Default: auto. OPTIONS: auto, always, never.
     \\    --report                     Show a short summary of files and folders.
     \\-d, --dir                        Only show directories. If used with -D, both are ignored.
     \\-D, --no_dir                     Only show files. If used with -d, both are ignored.
@@ -60,6 +61,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         .SORTTYPE = clap.parsers.enumeration(zlist.SortType),
         .INT = clap.parsers.int(i8, 10),
         .ROOTDISPLAY = clap.parsers.enumeration(render.RootDisplay),
+        .COLORUSE = clap.parsers.enumeration(render.ColorUse),
     };
 
     // parse command line arguments
@@ -106,7 +108,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         opt.path = path;
 
         // Reuse parsed rendering options for every requested path.
-        runForPath(allocator, io, opt, cli.long_view_opt, cli.root_display, path, cli.pure, cli.paths.len > 1, index) catch |err| switch (err) {
+        runForPath(allocator, io, opt, cli.long_view_opt, cli.root_display, path, cli.pure, cli.color_use, cli.paths.len > 1, index) catch |err| switch (err) {
             error.FileNotFound => std.debug.print("zl: path not found: {s}\n", .{path}),
             error.NotDir => std.debug.print("zl: not a directory: {s}\n", .{path}),
             else => return err,
@@ -122,6 +124,7 @@ inline fn runForPath(
     root_display: render.RootDisplay,
     path: []const u8,
     pure: bool,
+    color_use: render.ColorUse,
     show_header: bool,
     index: usize,
 ) !void {
@@ -141,7 +144,7 @@ inline fn runForPath(
 
     const cwd = std.Io.Dir.cwd();
     const dir = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
-        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, path),
+        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, path),
         error.FileNotFound => {
             std.debug.print("zl: path not found: {s}\n", .{path});
             return;
@@ -150,7 +153,7 @@ inline fn runForPath(
     };
     defer dir.close(io);
 
-    return runForDirectory(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, dir);
+    return runForDirectory(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, dir);
 }
 
 inline fn runForDirectory(
@@ -161,12 +164,13 @@ inline fn runForDirectory(
     long_view_opt: render.LongViewOptions,
     root_display: render.RootDisplay,
     pure: bool,
+    color_use: render.ColorUse,
     dir: std.Io.Dir,
 ) !void {
     var files = try zlist.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, &files, dir);
+    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, &files, dir);
 }
 
 inline fn runForSingleFile(
@@ -177,12 +181,13 @@ inline fn runForSingleFile(
     long_view_opt: render.LongViewOptions,
     root_display: render.RootDisplay,
     pure: bool,
+    color_use: render.ColorUse,
     path: []const u8,
 ) !void {
     var files = try zlist.Files.initSingle(allocator, io, path, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, &files, null);
+    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, &files, null);
 }
 
 fn printFiles(
@@ -192,6 +197,7 @@ fn printFiles(
     long_view_opt: render.LongViewOptions,
     root_display: render.RootDisplay,
     pure: bool,
+    color_use: render.ColorUse,
     files: *zlist.Files,
     dir: ?std.Io.Dir,
 ) !void {
@@ -206,8 +212,8 @@ fn printFiles(
     if (opt.show_detail) {
         // long format
         switch (pure) {
-            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt),
-            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt),
+            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt, color_use),
+            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt, color_use),
         }
     } else if (opt.recursive) {
         // recursive
@@ -220,20 +226,20 @@ fn printFiles(
             }
 
             switch (pure) {
-                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display),
-                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display),
+                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display, color_use),
+                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display, color_use),
             }
         } else {
             switch (pure) {
-                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
-                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
+                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, color_use),
+                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, color_use),
             }
         }
     } else {
         // normal format
         switch (pure) {
-            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
-            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
+            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, color_use),
+            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, color_use),
         }
     }
 

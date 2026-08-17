@@ -11,6 +11,7 @@ pub const CliConfig = struct {
     /// Root display options in recursive mode
     root_display: render.RootDisplay,
     pure: bool,
+    color_use: render.ColorUse,
     paths: []const []const u8,
 };
 
@@ -63,6 +64,8 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
         pure = true;
     }
 
+    const color_use = res.args.color orelse .auto;
+
     if (res.args.report != 0) {
         opt.report = true;
     }
@@ -113,6 +116,7 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
         .long_view_opt = long_view_opt,
         .root_display = root_display,
         .pure = pure,
+        .color_use = color_use,
         .paths = paths,
     };
 }
