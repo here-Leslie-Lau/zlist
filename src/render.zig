@@ -99,7 +99,6 @@ pub fn list(
     term: Terminal,
     handle: std.Io.File.Handle,
     comptime mode_opt: ModeOptionsComptime,
-    color_use: ColorUse,
 ) !void {
     const term_width = getTerminalWidth(handle);
     const entries = files.entries();
@@ -186,7 +185,7 @@ pub fn list(
                 const icon = getIcon(val.is_dir, val.name);
                 try term.writer.print("  ", .{});
 
-                try term.setColor(getColor(val.is_dir, val.name, color_use));
+                try term.setColor(getColor(val.is_dir, val.name));
                 try term.writer.print("{s}{s}", .{ icon, val.name });
                 try term.setColor(Terminal.Color.reset);
             } else {
@@ -211,7 +210,6 @@ pub fn listDetail(
     term: Terminal,
     comptime mode_opt: ModeOptionsComptime,
     view_opt: LongViewOptions,
-    color_use: ColorUse,
 ) !void {
     var perm_buf: [10]u8 = undefined;
     var size_buf: [32]u8 = undefined;
@@ -246,7 +244,7 @@ pub fn listDetail(
 
     for (files.entries()) |val| {
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.name, color_use));
+            try term.setColor(getColor(val.is_dir, val.name));
         }
 
         if (show_git) {
@@ -281,13 +279,12 @@ pub fn listRecursive(
     dir: std.Io.Dir,
     comptime mode_opt: ModeOptionsComptime,
     root_display: RootDisplay,
-    color_use: ColorUse,
 ) !void {
     if (first) {
         switch (root_display) {
             .dot => try term.writer.print(".\n", .{}),
             .name => {
-                try term.setColor(getColor(true, root_dir, color_use));
+                try term.setColor(getColor(true, root_dir));
                 try term.writer.print("{s}{s}\n", .{ getIcon(true, root_dir), root_dir });
                 try term.setColor(Terminal.Color.reset);
             },
@@ -322,7 +319,7 @@ pub fn listRecursive(
 
         // print file/directory name
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.name, color_use));
+            try term.setColor(getColor(val.is_dir, val.name));
 
             try term.writer.print(comptime PrintMode.RecursiveWithFileMeta.toString(), .{
                 getIcon(val.is_dir, val.name),
@@ -365,7 +362,7 @@ pub fn listRecursive(
             try prefix_builder.appendSlice(files.allocator, prefix);
             try prefix_builder.appendSlice(files.allocator, child_connector);
 
-            try listRecursive(root_dir, &sub_files, term, prefix_builder.items, false, sub_dir, mode_opt, root_display, color_use);
+            try listRecursive(root_dir, &sub_files, term, prefix_builder.items, false, sub_dir, mode_opt, root_display);
 
             // accumulate counts from subdirectories
             files.addReportTotals(sub_files);
@@ -387,8 +384,26 @@ pub inline fn printReport(files: zlist.Files, writer: anytype) !void {
 }
 
 /// get terminal info
-pub inline fn getTerminal(io: std.Io, writer: anytype, f: std.Io.File) !Terminal {
-    const term_mode = try Terminal.Mode.detect(io, f, false, false);
+pub inline fn getTerminal(io: std.Io, writer: anytype, f: std.Io.File, color_use: ColorUse) !Terminal {
+    const no_color = if (color_use == .never)
+        true
+    else if (color_use == .always)
+        false
+    else if (std.c.getenv("NO_COLOR")) |val|
+        !std.mem.eql(u8, std.mem.span(val), "0")
+    else
+        false;
+
+    const force_color = if (color_use == .always)
+        true
+    else if (color_use == .never)
+        false
+    else if (std.c.getenv("CLICOLOR_FORCE")) |val|
+        !std.mem.eql(u8, std.mem.span(val), "0")
+    else
+        false;
+
+    const term_mode = try Terminal.Mode.detect(io, f, no_color, force_color);
     return Terminal{
         .mode = term_mode,
         .writer = writer,
@@ -420,9 +435,7 @@ inline fn getIcon(is_dir: bool, name: []const u8) []const u8 {
     return " ";
 }
 
-inline fn getColor(is_dir: bool, name: []const u8, color_use: ColorUse) Terminal.Color {
-    if (color_use == .never) return Terminal.Color.reset;
-
+inline fn getColor(is_dir: bool, name: []const u8) Terminal.Color {
     if (is_dir) {
         return Terminal.Color.bright_blue;
     }
@@ -543,7 +556,7 @@ test "recursive" {
     );
     defer files.deinit();
 
-    const term = try getTerminal(io, &stdout_writer.interface, stdout_file);
+    const term = try getTerminal(io, &stdout_writer.interface, stdout_file, true, true);
 
     try listRecursive(".", &files, term, "", true, tmp_dir.dir, .{ .pure = false }, .dot);
     try stdout_writer.interface.flush();
