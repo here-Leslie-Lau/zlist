@@ -207,13 +207,13 @@ fn printFiles(
 
     var stdout_buf: [4096]u8 = undefined;
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
-    const term = try render.getTerminal(io, &stdout_writer.interface, stdout_file);
+    const term = try render.getTerminal(io, &stdout_writer.interface, stdout_file, color_use);
 
     if (opt.show_detail) {
         // long format
         switch (pure) {
-            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt, color_use),
-            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt, color_use),
+            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt),
+            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt),
         }
     } else if (opt.recursive) {
         // recursive
@@ -226,20 +226,20 @@ fn printFiles(
             }
 
             switch (pure) {
-                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display, color_use),
-                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display, color_use),
+                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display),
+                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display),
             }
         } else {
             switch (pure) {
-                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, color_use),
-                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, color_use),
+                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
+                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
             }
         }
     } else {
         // normal format
         switch (pure) {
-            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, color_use),
-            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, color_use),
+            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
+            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
         }
     }
 
