@@ -113,14 +113,13 @@ pub fn main(init: std.process.Init.Minimal) !void {
         }
         return;
     };
-    _ = config;
 
     for (cli.paths, 0..) |path, index| {
         var opt = cli.opt;
         opt.path = path;
 
         // Reuse parsed rendering options for every requested path.
-        runForPath(allocator, io, opt, cli.long_view_opt, cli.root_display, path, cli.pure, cli.color_use, cli.paths.len > 1, index) catch |err| switch (err) {
+        runForPath(allocator, io, opt, cli.long_view_opt, cli.root_display, path, cli.pure, cli.color_use, config, cli.paths.len > 1, index) catch |err| switch (err) {
             error.FileNotFound => std.debug.print("zl: path not found: {s}\n", .{path}),
             error.NotDir => std.debug.print("zl: not a directory: {s}\n", .{path}),
             else => return err,
@@ -137,6 +136,7 @@ inline fn runForPath(
     path: []const u8,
     pure: bool,
     color_use: render.ColorUse,
+    config: cfg.Config,
     show_header: bool,
     index: usize,
 ) !void {
@@ -156,7 +156,7 @@ inline fn runForPath(
 
     const cwd = std.Io.Dir.cwd();
     const dir = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
-        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, path),
+        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, path),
         error.FileNotFound => {
             std.debug.print("zl: path not found: {s}\n", .{path});
             return;
@@ -165,7 +165,7 @@ inline fn runForPath(
     };
     defer dir.close(io);
 
-    return runForDirectory(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, dir);
+    return runForDirectory(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, dir);
 }
 
 inline fn runForDirectory(
@@ -177,12 +177,13 @@ inline fn runForDirectory(
     root_display: render.RootDisplay,
     pure: bool,
     color_use: render.ColorUse,
+    config: cfg.Config,
     dir: std.Io.Dir,
 ) !void {
     var files = try zlist.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, &files, dir);
+    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, &files, dir);
 }
 
 inline fn runForSingleFile(
@@ -194,12 +195,13 @@ inline fn runForSingleFile(
     root_display: render.RootDisplay,
     pure: bool,
     color_use: render.ColorUse,
+    config: cfg.Config,
     path: []const u8,
 ) !void {
     var files = try zlist.Files.initSingle(allocator, io, path, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, &files, null);
+    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, &files, null);
 }
 
 fn printFiles(
@@ -210,6 +212,7 @@ fn printFiles(
     root_display: render.RootDisplay,
     pure: bool,
     color_use: render.ColorUse,
+    config: cfg.Config,
     files: *zlist.Files,
     dir: ?std.Io.Dir,
 ) !void {
@@ -224,8 +227,8 @@ fn printFiles(
     if (opt.show_detail) {
         // long format
         switch (pure) {
-            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt),
-            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt),
+            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt, config),
+            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt, config),
         }
     } else if (opt.recursive) {
         // recursive
@@ -238,20 +241,20 @@ fn printFiles(
             }
 
             switch (pure) {
-                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display),
-                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display),
+                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display, config),
+                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display, config),
             }
         } else {
             switch (pure) {
-                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
-                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
+                true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, config),
+                false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, config),
             }
         }
     } else {
         // normal format
         switch (pure) {
-            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }),
-            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }),
+            true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, config),
+            false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, config),
         }
     }
 
