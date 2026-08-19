@@ -1,6 +1,7 @@
 const std = @import("std");
 const Terminal = std.Io.Terminal;
 
+const cfg = @import("cfg.zig");
 const zlist = @import("zlist");
 
 /// The render options that are determined at compile time.
@@ -99,6 +100,7 @@ pub fn list(
     term: Terminal,
     handle: std.Io.File.Handle,
     comptime mode_opt: ModeOptionsComptime,
+    config: cfg.Config,
 ) !void {
     const term_width = getTerminalWidth(handle);
     const entries = files.entries();
@@ -182,10 +184,10 @@ pub fn list(
 
             // Print prefix, icon and name
             if (!mode_opt.pure) {
-                const icon = getIcon(val.is_dir, val.name);
+                const icon = getIcon(val.is_dir, val.name, config);
                 try term.writer.print("  ", .{});
 
-                try term.setColor(getColor(val.is_dir, val.name));
+                try term.setColor(getColor(val.is_dir, val.name, config));
                 try term.writer.print("{s}{s}", .{ icon, val.name });
                 try term.setColor(Terminal.Color.reset);
             } else {
@@ -210,6 +212,7 @@ pub fn listDetail(
     term: Terminal,
     comptime mode_opt: ModeOptionsComptime,
     view_opt: LongViewOptions,
+    config: cfg.Config,
 ) !void {
     var perm_buf: [10]u8 = undefined;
     var size_buf: [32]u8 = undefined;
@@ -244,7 +247,7 @@ pub fn listDetail(
 
     for (files.entries()) |val| {
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.name));
+            try term.setColor(getColor(val.is_dir, val.name, config));
         }
 
         if (show_git) {
@@ -259,7 +262,7 @@ pub fn listDetail(
         if (view_opt.show_group) try term.writer.print("{s:<[1]} ", .{ val.groupname, group_len });
         if (view_opt.show_size) try term.writer.print("{s:>[1]} ", .{ try val.humanSize(&size_buf), size_len });
         if (view_opt.show_time) try term.writer.print("{s:>[1]} ", .{ try val.formatTime(&time_buf), time_len });
-        if (view_opt.show_icon and !mode_opt.pure) try term.writer.print("{s}", .{getIcon(val.is_dir, val.name)});
+        if (view_opt.show_icon and !mode_opt.pure) try term.writer.print("{s}", .{getIcon(val.is_dir, val.name, config)});
         try term.writer.print("{s}", .{try val.formatLongDisplayName(&display_name_buf)});
 
         if (!mode_opt.pure) {
@@ -279,13 +282,14 @@ pub fn listRecursive(
     dir: std.Io.Dir,
     comptime mode_opt: ModeOptionsComptime,
     root_display: RootDisplay,
+    config: cfg.Config,
 ) !void {
     if (first) {
         switch (root_display) {
             .dot => try term.writer.print(".\n", .{}),
             .name => {
-                try term.setColor(getColor(true, root_dir));
-                try term.writer.print("{s}{s}\n", .{ getIcon(true, root_dir), root_dir });
+                try term.setColor(getColor(true, root_dir, config));
+                try term.writer.print("{s}{s}\n", .{ getIcon(true, root_dir, config), root_dir });
                 try term.setColor(Terminal.Color.reset);
             },
             .none => {},
@@ -319,10 +323,10 @@ pub fn listRecursive(
 
         // print file/directory name
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.name));
+            try term.setColor(getColor(val.is_dir, val.name, config));
 
             try term.writer.print(comptime PrintMode.RecursiveWithFileMeta.toString(), .{
-                getIcon(val.is_dir, val.name),
+                getIcon(val.is_dir, val.name, config),
                 val.name,
             });
         } else {
@@ -362,7 +366,7 @@ pub fn listRecursive(
             try prefix_builder.appendSlice(files.allocator, prefix);
             try prefix_builder.appendSlice(files.allocator, child_connector);
 
-            try listRecursive(root_dir, &sub_files, term, prefix_builder.items, false, sub_dir, mode_opt, root_display);
+            try listRecursive(root_dir, &sub_files, term, prefix_builder.items, false, sub_dir, mode_opt, root_display, config);
 
             // accumulate counts from subdirectories
             files.addReportTotals(sub_files);
@@ -421,7 +425,8 @@ inline fn getTerminalWidth(handle: std.Io.File.Handle) usize {
     return 80;
 }
 
-inline fn getIcon(is_dir: bool, name: []const u8) []const u8 {
+inline fn getIcon(is_dir: bool, name: []const u8, config: cfg.Config) []const u8 {
+    _ = config;
     if (is_dir) {
         return " ";
     }
@@ -435,7 +440,8 @@ inline fn getIcon(is_dir: bool, name: []const u8) []const u8 {
     return " ";
 }
 
-inline fn getColor(is_dir: bool, name: []const u8) Terminal.Color {
+inline fn getColor(is_dir: bool, name: []const u8, config: cfg.Config) Terminal.Color {
+    _ = config;
     if (is_dir) {
         return Terminal.Color.bright_blue;
     }
@@ -508,7 +514,7 @@ test "detail size column expands to fit its widest value" {
         .show_time = false,
         .show_icon = false,
     };
-    try listDetail(files, term, .{ .pure = true }, view_opt);
+    try listDetail(files, term, .{ .pure = true }, view_opt, .{});
 
     try std.testing.expectEqualStrings(
         "   3B small.txt\n1004B wide.txt\n",
@@ -518,7 +524,7 @@ test "detail size column expands to fit its widest value" {
     output_writer = .fixed(&output_buf);
     var header_view_opt = view_opt;
     header_view_opt.header = true;
-    try listDetail(files, term, .{ .pure = true }, header_view_opt);
+    try listDetail(files, term, .{ .pure = true }, header_view_opt, .{});
 
     try std.testing.expectEqualStrings(
         " Size Name\n   3B small.txt\n1004B wide.txt\n",
@@ -558,6 +564,6 @@ test "recursive" {
 
     const term = try getTerminal(io, &stdout_writer.interface, stdout_file, true, true);
 
-    try listRecursive(".", &files, term, "", true, tmp_dir.dir, .{ .pure = false }, .dot);
+    try listRecursive(".", &files, term, "", true, tmp_dir.dir, .{ .pure = false }, .dot, .{});
     try stdout_writer.interface.flush();
 }
