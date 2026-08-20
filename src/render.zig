@@ -426,33 +426,27 @@ inline fn getTerminalWidth(handle: std.Io.File.Handle) usize {
 }
 
 inline fn getIcon(is_dir: bool, name: []const u8, config: cfg.Config) []const u8 {
-    _ = config;
-    if (is_dir) {
-        return " ";
-    }
+    if (is_dir) return config.dir_icon;
 
     const ext = std.fs.path.extension(name);
-    if (icon_inventory.get(ext)) |icon| {
-        return icon;
+    // Config wins over the built-in map.
+    for (config.icon_by_ext) |entry| {
+        if (std.mem.eql(u8, entry.ext, ext)) return entry.icon;
     }
-
-    // return default icons based on extension
-    return " ";
+    if (icon_inventory.get(ext)) |icon| return icon;
+    return config.file_icon;
 }
 
 inline fn getColor(is_dir: bool, name: []const u8, config: cfg.Config) Terminal.Color {
-    _ = config;
-    if (is_dir) {
-        return Terminal.Color.bright_blue;
-    }
+    if (is_dir) return config.dir_color;
 
     const ext = std.fs.path.extension(name);
-    if (color_inventory.get(ext)) |color| {
-        return color;
+    // Config wins over the built-in map.
+    for (config.color_by_ext) |entry| {
+        if (std.mem.eql(u8, entry.ext, ext)) return entry.color;
     }
-
-    // default file color
-    return Terminal.Color.bright_yellow;
+    if (color_inventory.get(ext)) |color| return color;
+    return config.file_color;
 }
 
 inline fn getGitStatusChar(files: zlist.Files, name: []const u8) ?u8 {
