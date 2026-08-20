@@ -35,6 +35,7 @@ Already pretty capable for a learning project:
 *   **Useful filters** for files, directories, extensions, names, size, and modified time.
 *   **Quick summary report** for file and folder counts.
 *   **Git status indicators** in long view.
+*   **Configurable icons and colors** via a `.zon` file (`-C`).
 
 <a id="preview"></a>
 ## Preview
@@ -172,10 +173,21 @@ $ zl --help
     -m, --match <str>...
             Filter names by substring (e.g. --match main,readme).
 
+    -C, --config <str>
+            Load config from a .zon file.
+
     <str>...
 ```
 
 For common commands examples, see [zlist examples](docs/examples.md).
+
+Icons and colors are configurable too:
+
+```bash
+zl -C zlist.zon
+```
+
+See [config](docs/config.md) for a sample file.
 
 <a id="module"></a>
 ## Use as a Zig Module
@@ -262,8 +274,8 @@ Numbers move with cache, load, and FS. YMMV.
 *   [x] Git status integration (`-g`)
 *   [x] Recursive directory size (`--du`)
 *   [x] Lib API for embedding in other Zig projects
+*   [x] Custom color/icon configurations (`-C`)
 *   [ ] Multi-threading for faster `stat` calls
-*   [ ] Custom color/icon configurations (Maybe, if you need it)
 
 <a id="contributing"></a>
 ## Contributing
