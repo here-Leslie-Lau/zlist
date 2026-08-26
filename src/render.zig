@@ -429,24 +429,25 @@ inline fn getIcon(is_dir: bool, name: []const u8, config: cfg.Config) []const u8
     if (is_dir) return config.dir_icon;
 
     const ext = std.fs.path.extension(name);
-    // Config wins over the built-in map.
     for (config.icon_by_ext) |entry| {
         if (std.mem.eql(u8, entry.ext, ext)) return entry.icon;
     }
+    // `.file` in the zon, if present, replaces the built-in map.
+    if (config.file_icon) |icon| return icon;
     if (icon_inventory.get(ext)) |icon| return icon;
-    return config.file_icon;
+    return " ";
 }
 
 inline fn getColor(is_dir: bool, name: []const u8, config: cfg.Config) Terminal.Color {
     if (is_dir) return config.dir_color;
 
     const ext = std.fs.path.extension(name);
-    // Config wins over the built-in map.
     for (config.color_by_ext) |entry| {
         if (std.mem.eql(u8, entry.ext, ext)) return entry.color;
     }
+    if (config.file_color) |color| return color;
     if (color_inventory.get(ext)) |color| return color;
-    return config.file_color;
+    return .bright_yellow;
 }
 
 inline fn getGitStatusChar(files: zlist.Files, name: []const u8) ?u8 {
