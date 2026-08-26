@@ -13,14 +13,15 @@ pub const ExtColor = struct {
 };
 
 /// Runtime config loaded from a `.zon` file.
-/// Defaults match the built-in render appearance.
 pub const Config = struct {
     dir_icon: []const u8 = " ",
-    file_icon: []const u8 = " ",
+    /// When set, skips the built-in map for files that didn't match `by_ext`.
+    file_icon: ?[]const u8 = null,
     icon_by_ext: []const ExtIcon = &.{},
 
     dir_color: Color = .bright_blue,
-    file_color: Color = .bright_yellow,
+    /// Same as `file_icon`.
+    file_color: ?Color = null,
     color_by_ext: []const ExtColor = &.{},
 };
 
@@ -142,13 +143,13 @@ test "load applies partial overrides" {
     std.debug.print("load(partial) => {any}\n", .{config});
 
     try testing.expectEqualStrings("D ", config.dir_icon);
-    try testing.expectEqualStrings(" ", config.file_icon);
+    try testing.expectEqual(@as(?[]const u8, null), config.file_icon);
     try testing.expectEqual(@as(usize, 1), config.icon_by_ext.len);
     try testing.expectEqualStrings(".zig", config.icon_by_ext[0].ext);
     try testing.expectEqualStrings("Z ", config.icon_by_ext[0].icon);
 
     try testing.expectEqual(Color.bright_blue, config.dir_color);
-    try testing.expectEqual(Color.bright_green, config.file_color);
+    try testing.expectEqual(@as(?Color, .bright_green), config.file_color);
     try testing.expectEqual(@as(usize, 1), config.color_by_ext.len);
     try testing.expectEqualStrings(".md", config.color_by_ext[0].ext);
     try testing.expectEqual(Color.bright_magenta, config.color_by_ext[0].color);
@@ -173,10 +174,10 @@ test "load rejects unknown color names" {
 fn expectDefaultConfig(config: Config) !void {
     const testing = std.testing;
     try testing.expectEqualStrings(" ", config.dir_icon);
-    try testing.expectEqualStrings(" ", config.file_icon);
+    try testing.expectEqual(@as(?[]const u8, null), config.file_icon);
     try testing.expectEqual(@as(usize, 0), config.icon_by_ext.len);
     try testing.expectEqual(Color.bright_blue, config.dir_color);
-    try testing.expectEqual(Color.bright_yellow, config.file_color);
+    try testing.expectEqual(@as(?Color, null), config.file_color);
     try testing.expectEqual(@as(usize, 0), config.color_by_ext.len);
 }
 
