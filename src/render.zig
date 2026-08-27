@@ -1,8 +1,9 @@
 const std = @import("std");
 const Terminal = std.Io.Terminal;
 
-const cfg = @import("cfg.zig");
 const zlist = @import("zlist");
+
+const cfg = @import("cfg.zig");
 
 /// The render options that are determined at compile time.
 const ModeOptionsComptime = struct {
@@ -184,10 +185,10 @@ pub fn list(
 
             // Print prefix, icon and name
             if (!mode_opt.pure) {
-                const icon = getIcon(val.is_dir, val.is_symlink, val.name, config);
+                const icon = getIcon(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config);
                 try term.writer.print("  ", .{});
 
-                try term.setColor(getColor(val.is_dir, val.is_symlink, val.name, config));
+                try term.setColor(getColor(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config));
                 try term.writer.print("{s}{s}", .{ icon, val.name });
                 try term.setColor(Terminal.Color.reset);
             } else {
@@ -247,7 +248,7 @@ pub fn listDetail(
 
     for (files.entries()) |val| {
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.is_symlink, val.name, config));
+            try term.setColor(getColor(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config));
         }
 
         if (show_git) {
@@ -262,7 +263,7 @@ pub fn listDetail(
         if (view_opt.show_group) try term.writer.print("{s:<[1]} ", .{ val.groupname, group_len });
         if (view_opt.show_size) try term.writer.print("{s:>[1]} ", .{ try val.humanSize(&size_buf), size_len });
         if (view_opt.show_time) try term.writer.print("{s:>[1]} ", .{ try val.formatTime(&time_buf), time_len });
-        if (view_opt.show_icon and !mode_opt.pure) try term.writer.print("{s}", .{getIcon(val.is_dir, val.is_symlink, val.name, config)});
+        if (view_opt.show_icon and !mode_opt.pure) try term.writer.print("{s}", .{getIcon(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config)});
         try term.writer.print("{s}", .{try val.formatLongDisplayName(&display_name_buf)});
 
         if (!mode_opt.pure) {
@@ -288,8 +289,8 @@ pub fn listRecursive(
         switch (root_display) {
             .dot => try term.writer.print(".\n", .{}),
             .name => {
-                try term.setColor(getColor(true, false, root_dir, config));
-                try term.writer.print("{s}{s}\n", .{ getIcon(true, false, root_dir, config), root_dir });
+                try term.setColor(getColor(true, false, false, root_dir, config));
+                try term.writer.print("{s}{s}\n", .{ getIcon(true, false, false, root_dir, config), root_dir });
                 try term.setColor(Terminal.Color.reset);
             },
             .none => {},
@@ -323,10 +324,10 @@ pub fn listRecursive(
 
         // print file/directory name
         if (!mode_opt.pure) {
-            try term.setColor(getColor(val.is_dir, val.is_symlink, val.name, config));
+            try term.setColor(getColor(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config));
 
             try term.writer.print(comptime PrintMode.RecursiveWithFileMeta.toString(), .{
-                getIcon(val.is_dir, val.is_symlink, val.name, config),
+                getIcon(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config),
                 val.name,
             });
         } else {
@@ -425,10 +426,19 @@ inline fn getTerminalWidth(handle: std.Io.File.Handle) usize {
     return 80;
 }
 
-inline fn getIcon(is_dir: bool, is_symlink: bool, name: []const u8, config: cfg.Config) []const u8 {
+inline fn getIcon(is_dir: bool, is_symlink: bool, is_symlink_to_dir: bool, name: []const u8, config: cfg.Config) []const u8 {
     if (is_dir) return config.dir_icon;
+
     if (is_symlink) {
-        if (config.symlink_icon) |icon| return icon;
+        if (is_symlink_to_dir) {
+            if (config.inherit_dir_symlink) return config.dir_icon;
+            if (config.dir_symlink_icon) |icon| return icon;
+            return " ";
+        }
+        if (!config.inherit_symlink) {
+            if (config.symlink_icon) |icon| return icon;
+            return " ";
+        }
     }
 
     const ext = std.fs.path.extension(name);
@@ -441,10 +451,19 @@ inline fn getIcon(is_dir: bool, is_symlink: bool, name: []const u8, config: cfg.
     return " ";
 }
 
-inline fn getColor(is_dir: bool, is_symlink: bool, name: []const u8, config: cfg.Config) Terminal.Color {
+inline fn getColor(is_dir: bool, is_symlink: bool, is_symlink_to_dir: bool, name: []const u8, config: cfg.Config) Terminal.Color {
     if (is_dir) return config.dir_color;
+
     if (is_symlink) {
-        if (config.symlink_color) |color| return color;
+        if (is_symlink_to_dir) {
+            if (config.inherit_dir_symlink) return config.dir_color;
+            if (config.dir_symlink_color) |color| return color;
+            return .bright_cyan;
+        }
+        if (!config.inherit_symlink) {
+            if (config.symlink_color) |color| return color;
+            return .bright_cyan;
+        }
     }
 
     const ext = std.fs.path.extension(name);
