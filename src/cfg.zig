@@ -1,5 +1,4 @@
 const std = @import("std");
-
 const Color = std.Io.Terminal.Color;
 
 pub const ExtIcon = struct {
@@ -17,8 +16,10 @@ pub const Config = struct {
     dir_icon: []const u8 = " ",
     /// When set, skips the built-in map for files that didn't match `by_ext`.
     file_icon: ?[]const u8 = null,
-    /// When set, used for every symlink instead of the file/ext maps.
+    /// When set, used for every file symlink
     symlink_icon: ?[]const u8 = null,
+    /// When set, used for every dir symlink
+    dir_symlink_icon: ?[]const u8 = null,
     icon_by_ext: []const ExtIcon = &.{},
 
     dir_color: Color = .bright_blue,
@@ -26,18 +27,28 @@ pub const Config = struct {
     file_color: ?Color = null,
     /// Same as `symlink_icon`.
     symlink_color: ?Color = null,
+    /// Same as `dir_symlink_icon`.
+    dir_symlink_color: ?Color = null,
     color_by_ext: []const ExtColor = &.{},
+
+    /// When true, inherits the icon and color for symlinks
+    inherit_symlink: bool = false,
+    /// When true, inherits the icon and color for dir symlinks
+    inherit_dir_symlink: bool = false,
 };
 
 /// ZON wire format. Every field is optional so partial files keep defaults.
 const File = struct {
     icons: ?Icons = null,
     colors: ?Colors = null,
+    inherit_symlink: ?bool = null,
+    inherit_dir_symlink: ?bool = null,
 
     const Icons = struct {
         dir: ?[]const u8 = null,
         file: ?[]const u8 = null,
         symlink: ?[]const u8 = null,
+        dir_symlink: ?[]const u8 = null,
         by_ext: ?[]const ExtIcon = null,
     };
 
@@ -45,6 +56,7 @@ const File = struct {
         dir: ?[]const u8 = null,
         file: ?[]const u8 = null,
         symlink: ?[]const u8 = null,
+        dir_symlink: ?[]const u8 = null,
         by_ext: ?[]const RawExtColor = null,
     };
 
@@ -82,6 +94,7 @@ fn configFromFile(allocator: std.mem.Allocator, file: File) !Config {
         if (icons.dir) |dir| config.dir_icon = dir;
         if (icons.file) |file_icon| config.file_icon = file_icon;
         if (icons.symlink) |symlink| config.symlink_icon = symlink;
+        if (icons.dir_symlink) |dir_symlink| config.dir_symlink_icon = dir_symlink;
         if (icons.by_ext) |by_ext| config.icon_by_ext = by_ext;
     }
 
@@ -89,6 +102,7 @@ fn configFromFile(allocator: std.mem.Allocator, file: File) !Config {
         if (colors.dir) |name| config.dir_color = try parseColor(name);
         if (colors.file) |name| config.file_color = try parseColor(name);
         if (colors.symlink) |name| config.symlink_color = try parseColor(name);
+        if (colors.dir_symlink) |name| config.dir_symlink_color = try parseColor(name);
         if (colors.by_ext) |entries| {
             const by_ext = try allocator.alloc(ExtColor, entries.len);
             for (entries, 0..) |entry, i| {
@@ -100,6 +114,9 @@ fn configFromFile(allocator: std.mem.Allocator, file: File) !Config {
             config.color_by_ext = by_ext;
         }
     }
+
+    if (file.inherit_symlink) |inherit_symlink| config.inherit_symlink = inherit_symlink;
+    if (file.inherit_dir_symlink) |inherit_dir_symlink| config.inherit_dir_symlink = inherit_dir_symlink;
 
     return config;
 }
