@@ -17,11 +17,15 @@ pub const Config = struct {
     dir_icon: []const u8 = " ",
     /// When set, skips the built-in map for files that didn't match `by_ext`.
     file_icon: ?[]const u8 = null,
+    /// When set, used for every symlink instead of the file/ext maps.
+    symlink_icon: ?[]const u8 = null,
     icon_by_ext: []const ExtIcon = &.{},
 
     dir_color: Color = .bright_blue,
     /// Same as `file_icon`.
     file_color: ?Color = null,
+    /// Same as `symlink_icon`.
+    symlink_color: ?Color = null,
     color_by_ext: []const ExtColor = &.{},
 };
 
@@ -33,12 +37,14 @@ const File = struct {
     const Icons = struct {
         dir: ?[]const u8 = null,
         file: ?[]const u8 = null,
+        symlink: ?[]const u8 = null,
         by_ext: ?[]const ExtIcon = null,
     };
 
     const Colors = struct {
         dir: ?[]const u8 = null,
         file: ?[]const u8 = null,
+        symlink: ?[]const u8 = null,
         by_ext: ?[]const RawExtColor = null,
     };
 
@@ -75,12 +81,14 @@ fn configFromFile(allocator: std.mem.Allocator, file: File) !Config {
     if (file.icons) |icons| {
         if (icons.dir) |dir| config.dir_icon = dir;
         if (icons.file) |file_icon| config.file_icon = file_icon;
+        if (icons.symlink) |symlink| config.symlink_icon = symlink;
         if (icons.by_ext) |by_ext| config.icon_by_ext = by_ext;
     }
 
     if (file.colors) |colors| {
         if (colors.dir) |name| config.dir_color = try parseColor(name);
         if (colors.file) |name| config.file_color = try parseColor(name);
+        if (colors.symlink) |name| config.symlink_color = try parseColor(name);
         if (colors.by_ext) |entries| {
             const by_ext = try allocator.alloc(ExtColor, entries.len);
             for (entries, 0..) |entry, i| {
@@ -126,12 +134,14 @@ test "load applies partial overrides" {
         \\.{
         \\    .icons = .{
         \\        .dir = "D ",
+        \\        .symlink = "L ",
         \\        .by_ext = .{
         \\            .{ .ext = ".zig", .icon = "Z " },
         \\        },
         \\    },
         \\    .colors = .{
         \\        .file = "bright_green",
+        \\        .symlink = "cyan",
         \\        .by_ext = .{
         \\            .{ .ext = ".md", .color = "bright_magenta" },
         \\        },
@@ -144,12 +154,14 @@ test "load applies partial overrides" {
 
     try testing.expectEqualStrings("D ", config.dir_icon);
     try testing.expectEqual(@as(?[]const u8, null), config.file_icon);
+    try testing.expectEqualStrings("L ", config.symlink_icon.?);
     try testing.expectEqual(@as(usize, 1), config.icon_by_ext.len);
     try testing.expectEqualStrings(".zig", config.icon_by_ext[0].ext);
     try testing.expectEqualStrings("Z ", config.icon_by_ext[0].icon);
 
     try testing.expectEqual(Color.bright_blue, config.dir_color);
     try testing.expectEqual(@as(?Color, .bright_green), config.file_color);
+    try testing.expectEqual(@as(?Color, .cyan), config.symlink_color);
     try testing.expectEqual(@as(usize, 1), config.color_by_ext.len);
     try testing.expectEqualStrings(".md", config.color_by_ext[0].ext);
     try testing.expectEqual(Color.bright_magenta, config.color_by_ext[0].color);
@@ -175,9 +187,11 @@ fn expectDefaultConfig(config: Config) !void {
     const testing = std.testing;
     try testing.expectEqualStrings(" ", config.dir_icon);
     try testing.expectEqual(@as(?[]const u8, null), config.file_icon);
+    try testing.expectEqual(@as(?[]const u8, null), config.symlink_icon);
     try testing.expectEqual(@as(usize, 0), config.icon_by_ext.len);
     try testing.expectEqual(Color.bright_blue, config.dir_color);
     try testing.expectEqual(@as(?Color, null), config.file_color);
+    try testing.expectEqual(@as(?Color, null), config.symlink_color);
     try testing.expectEqual(@as(usize, 0), config.color_by_ext.len);
 }
 
