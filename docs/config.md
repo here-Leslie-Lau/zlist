@@ -13,6 +13,7 @@ Leave a field out and the built-in value sticks. `by_ext` only overrides that ex
     .icons = .{
         .dir = " ",
         .file = " ",
+        .symlink = " ",
         .by_ext = .{
             .{ .ext = ".zig", .icon = " " },
         },
@@ -20,6 +21,7 @@ Leave a field out and the built-in value sticks. `by_ext` only overrides that ex
     .colors = .{
         .dir = "bright_blue",
         .file = "bright_yellow",
+        .symlink = "cyan",
         .by_ext = .{
             .{ .ext = ".md", .color = "bright_magenta" },
         },
