@@ -246,11 +246,11 @@ Each `<dir>` was a throwaway folder with `n` small text files (`file_0.txt` …)
 
 | Tool | n=50 | n=500 | n=5000 | n=50000 |
 | :--- | :--- | :--- | :--- | :--- |
-| `zl` | `1.2 ms ± 0.4 ms` [U 0.6 / S 0.4] | `1.7 ms ± 0.6 ms` [U 0.9 / S 0.6] | `5.9 ms ± 0.6 ms` [U 3.3 / S 2.0] | `49.9 ms ± 1.4 ms` [U 32.2 / S 16.8] |
-| `eza` | `3.7 ms ± 0.2 ms` [U 2.3 / S 0.9] | `5.6 ms ± 0.8 ms` [U 3.4 / S 1.9] | `21.2 ms ± 0.6 ms` [U 11.6 / S 8.9] | `176 ms ± 4.4 ms` [U 107 / S 66.9] |
-| `lsd` | `3.6 ms ± 0.5 ms` [U 1.6 / S 1.6] | `13.5 ms ± 2.9 ms` [U 2.9 / S 9.9] | `112 ms ± 1.9 ms` [U 13.5 / S 97.2] | `1.293 s ± 0.057 s` [U 0.12 / S 1.16] |
+| `zl` | `0.8 ms ± 0.4 ms` [U 0.6 / S 0.4] | `1.5 ms ± 0.1 ms` [U 0.7 / S 0.5] | `3.5 ms ± 0.1 ms` [U 1.6 / S 1.7] | `32.5 ms ± 0.6 ms` [U 15.5 / S 16.4] |
+| `eza` | `3.1 ms ± 0.3 ms` [U 2.2 / S 0.8] | `4.7 ms ± 0.1 ms` [U 2.9 / S 1.4] | `19.0 ms ± 0.6 ms` [U 10.6 / S 7.7] | `179 ms ± 3.6 ms` [U 107 / S 70.7] |
+| `lsd` | `3.0 ms ± 0.1 ms` [U 1.4 / S 1.4] | `13.0 ms ± 0.6 ms` [U 2.7 / S 9.9] | `114 ms ± 1.3 ms` [U 13.6 / S 100] | `1.289 s ± 0.015 s` [U 0.12 / S 1.16] |
 
-`zl` wins every column here. Gap vs `lsd` blows up on big dirs; vs `eza` it's a steadier ~3×. Still plenty of CPU left on the table at 50k (`zl` user time ~32ms) if we want to push further.
+`zl` wins every column here. Gap vs `lsd` blows up on big dirs; vs `eza` it's a steadier ~5.5×. At 50k, `zl` user time is ~16ms and system time ~16ms.
 
 Older README numbers had `eza` stuck near ~3ms even at 50k — that was a bad run on my side (wrong flags / sloppy setup). Ignore those; this table replaces them.
 
