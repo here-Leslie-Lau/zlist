@@ -142,7 +142,7 @@ pub const Files = struct {
             loaded_git = true;
         }
 
-        sort(files.items, opt.dir_grouping, opt.sort_type, opt.reverse);
+        try sort(allocator, files.items, opt.dir_grouping, opt.sort_type, opt.reverse);
 
         return .{
             .max_display_len = max_len,
@@ -372,11 +372,15 @@ pub const Files = struct {
     }
 
     const SortCtx = struct {
+        items: []const file.File,
         sort_type: opts.SortType,
         dir_grouping: opts.DirGrouping,
         reverse: bool,
 
-        fn lessThan(ctx: SortCtx, a: file.File, b: file.File) bool {
+        fn lessThan(ctx: SortCtx, ai: u32, bi: u32) bool {
+            const a = &ctx.items[ai];
+            const b = &ctx.items[bi];
+
             if (ctx.dir_grouping != .none) {
                 const a_is_dir = a.is_dir or a.is_symlink_to_dir;
                 const b_is_dir = b.is_dir or b.is_symlink_to_dir;
@@ -384,27 +388,63 @@ pub const Files = struct {
             }
 
             const res = switch (ctx.sort_type) {
-                .length => file.File.nameLenLessThan({}, a, b),
-                .mtime => file.File.mtimeMoreThan({}, a, b),
-                .size => file.File.sizeMoreThan({}, a, b),
-                else => file.File.nameLessThan({}, a, b),
+                .length => a.name.len < b.name.len,
+                .mtime => file.File.mtimeMoreThan({}, a.*, b.*),
+                .size => file.File.sizeMoreThan({}, a.*, b.*),
+                else => std.ascii.orderIgnoreCase(a.name, b.name) == .lt,
             };
 
             return if (ctx.reverse) !res else res;
         }
     };
 
-    fn sort(items: []file.File, dir_grouping: opts.DirGrouping, sort_type: opts.SortType, reverse: bool) void {
+    /// Sort by u32 index so pdq isn't swapping fat File values the whole time.
+    /// Permute once at the end.
+    fn sort(
+        allocator: mem.Allocator,
+        items: []file.File,
+        dir_grouping: opts.DirGrouping,
+        sort_type: opts.SortType,
+        reverse: bool,
+    ) !void {
+        if (items.len <= 1) return;
+
+        const idxs = try allocator.alloc(u32, items.len);
+        defer allocator.free(idxs);
+        for (idxs, 0..) |*idx, i| idx.* = @intCast(i);
+
         mem.sortUnstable(
-            file.File,
-            items,
+            u32,
+            idxs,
             SortCtx{
+                .items = items,
                 .dir_grouping = dir_grouping,
                 .sort_type = sort_type,
                 .reverse = reverse,
             },
             SortCtx.lessThan,
         );
+
+        applyIndexPermutation(items, idxs);
+    }
+
+    /// items[i] becomes the original items[idxs[i]]. `idxs` is overwritten.
+    fn applyIndexPermutation(items: []file.File, idxs: []u32) void {
+        for (idxs, 0..) |*slot, i| {
+            var current = i;
+            var src = slot.*;
+            if (src == i) continue;
+
+            const tmp = items[i];
+            while (src != i) {
+                items[current] = items[src];
+                idxs[current] = @intCast(current);
+                current = src;
+                src = idxs[current];
+            }
+            items[current] = tmp;
+            idxs[current] = @intCast(current);
+        }
     }
 
     /// recursively calculate directory size by summing up sizes of all descendant files.
