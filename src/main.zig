@@ -114,58 +114,75 @@ pub fn main(init: std.process.Init.Minimal) !void {
         return;
     };
 
-    for (cli.paths, 0..) |path, index| {
+    var file_paths = try std.ArrayList([]const u8).initCapacity(allocator, cli.paths.len);
+    var dir_paths = try std.ArrayList([]const u8).initCapacity(allocator, cli.paths.len);
+
+    const cwd = std.Io.Dir.cwd();
+    for (cli.paths) |path| {
+        const opened = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
+            error.NotDir => {
+                try file_paths.append(allocator, path);
+                continue;
+            },
+            error.FileNotFound => {
+                std.debug.print("zl: path not found: {s}\n", .{path});
+                continue;
+            },
+            else => return err,
+        };
+        opened.close(io);
+        try dir_paths.append(allocator, path);
+    }
+
+    const stdout_file = std.Io.File.stdout();
+    var listed_anything = false;
+
+    if (file_paths.items.len > 0) {
+        var opt = cli.opt;
+        opt.path = file_paths.items[0];
+        var files = try zlist.Files.initFromPaths(allocator, io, file_paths.items, opt);
+        defer files.deinit();
+        try printFiles(io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.color_use, config, &files, null);
+        listed_anything = true;
+    }
+
+    const show_dir_header = file_paths.items.len > 0 or dir_paths.items.len > 1;
+    for (dir_paths.items) |path| {
         var opt = cli.opt;
         opt.path = path;
 
-        // Reuse parsed rendering options for every requested path.
-        runForPath(allocator, io, opt, cli.long_view_opt, cli.root_display, path, cli.pure, cli.color_use, config, cli.paths.len > 1, index) catch |err| switch (err) {
-            error.FileNotFound => std.debug.print("zl: path not found: {s}\n", .{path}),
-            error.NotDir => std.debug.print("zl: not a directory: {s}\n", .{path}),
+        if (show_dir_header) {
+            try printPathHeader(io, stdout_file, path, listed_anything);
+        }
+
+        const dir = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
+            error.FileNotFound => {
+                std.debug.print("zl: path not found: {s}\n", .{path});
+                continue;
+            },
+            error.NotDir => {
+                std.debug.print("zl: not a directory: {s}\n", .{path});
+                continue;
+            },
             else => return err,
         };
+        defer dir.close(io);
+
+        try runForDirectory(allocator, io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.color_use, config, dir);
+        listed_anything = true;
     }
 }
 
-inline fn runForPath(
-    allocator: std.mem.Allocator,
-    io: std.Io,
-    opt: zlist.FilesOptions,
-    long_view_opt: render.LongViewOptions,
-    root_display: render.RootDisplay,
-    path: []const u8,
-    pure: bool,
-    color_use: render.ColorUse,
-    config: cfg.Config,
-    show_header: bool,
-    index: usize,
-) !void {
-    const stdout_file = std.Io.File.stdout();
+fn printPathHeader(io: std.Io, stdout_file: std.Io.File, path: []const u8, blank_line: bool) !void {
+    var header_buf: [512]u8 = undefined;
+    var header_writer = stdout_file.writer(io, &header_buf);
 
-    if (show_header) {
-        var header_buf: [512]u8 = undefined;
-        var header_writer = stdout_file.writer(io, &header_buf);
-
-        if (index > 0) {
-            try header_writer.interface.writeAll("\n");
-        }
-
-        try header_writer.interface.print("{s}:\n", .{path});
-        try header_writer.interface.flush();
+    if (blank_line) {
+        try header_writer.interface.writeAll("\n");
     }
 
-    const cwd = std.Io.Dir.cwd();
-    const dir = cwd.openDir(io, path, .{ .iterate = true }) catch |err| switch (err) {
-        error.NotDir => return runForSingleFile(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, path),
-        error.FileNotFound => {
-            std.debug.print("zl: path not found: {s}\n", .{path});
-            return;
-        },
-        else => return err,
-    };
-    defer dir.close(io);
-
-    return runForDirectory(allocator, io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, dir);
+    try header_writer.interface.print("{s}:\n", .{path});
+    try header_writer.interface.flush();
 }
 
 inline fn runForDirectory(
@@ -184,24 +201,6 @@ inline fn runForDirectory(
     defer files.deinit();
 
     try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, &files, dir);
-}
-
-inline fn runForSingleFile(
-    allocator: std.mem.Allocator,
-    io: std.Io,
-    stdout_file: std.Io.File,
-    opt: zlist.FilesOptions,
-    long_view_opt: render.LongViewOptions,
-    root_display: render.RootDisplay,
-    pure: bool,
-    color_use: render.ColorUse,
-    config: cfg.Config,
-    path: []const u8,
-) !void {
-    var files = try zlist.Files.initSingle(allocator, io, path, opt);
-    defer files.deinit();
-
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, &files, null);
 }
 
 fn printFiles(
