@@ -166,24 +166,20 @@ pub const Files = struct {
         path: []const u8,
         opt: opts.FilesOptions,
     ) !Self {
-        const parent_path = std.fs.path.dirname(path) orelse ".";
-        const base_name = std.fs.path.basename(path);
+        return initFromPaths(allocator, io, &.{path}, opt);
+    }
 
-        const cwd = std.Io.Dir.cwd();
-        const parent_dir = try cwd.openDir(io, parent_path, .{});
-        defer parent_dir.close(io);
-
-        const stat = try parent_dir.statFile(io, base_name, .{});
-        const entry: std.Io.Dir.Entry = .{
-            .name = base_name,
-            .kind = stat.kind,
-            .inode = 0,
-        };
-
+    /// List explicit file paths as one collection. Display names keep the given path.
+    pub fn initFromPaths(
+        allocator: mem.Allocator,
+        io: std.Io,
+        paths: []const []const u8,
+        opt: opts.FilesOptions,
+    ) !Self {
         var name_pool = try name_pool_mod.NamePool.init(allocator);
         errdefer name_pool.deinit();
 
-        var files = try std.ArrayList(file.File).initCapacity(allocator, 1);
+        var files = try std.ArrayList(file.File).initCapacity(allocator, paths.len);
         errdefer {
             deinitItems(allocator, files.items);
             files.deinit(allocator);
@@ -210,55 +206,81 @@ pub const Files = struct {
         var git_inventory = std.StringHashMap(git.GitStatus).init(allocator);
         errdefer deinitGitInventory(allocator, &git_inventory);
 
-        if (try file.File.init(
-            allocator,
-            io,
-            &entry,
-            &parent_dir,
-            .{
-                .load_stat = load_stat,
-                .load_symlink_target = opt.show_detail,
-                .resolve_symlink_dir = opt.dir_grouping != .none,
-                .load_owner = opt.show_detail,
-                .show_hidden = opt.show_hidden,
-                .only_dir = opt.only_dir,
-                .only_file = opt.only_file,
-                .keep_dirs_for_match = opt.recursive,
-                .keep_dirs_for_changed_within = opt.recursive,
-                .keep_dirs_for_size = opt.recursive,
-                .exts = opt.exts,
-                .matches = opt.matches,
-                .changed_within = opt.changed_within,
-                .size_range = opt.size_range,
-                .changed_within_now = changed_within_now,
-            },
-            &username_inventory,
-            &groupname_inventory,
-        )) |single_file| {
-            var item = single_file;
-            errdefer if (item.symlink_target) |target| allocator.free(target);
+        const cwd = std.Io.Dir.cwd();
+        const file_opt = opts.FileOptions{
+            .load_stat = load_stat,
+            .load_symlink_target = opt.show_detail,
+            .resolve_symlink_dir = opt.dir_grouping != .none,
+            .load_owner = opt.show_detail,
+            .show_hidden = opt.show_hidden,
+            .only_dir = opt.only_dir,
+            .only_file = opt.only_file,
+            .keep_dirs_for_match = opt.recursive,
+            .keep_dirs_for_changed_within = opt.recursive,
+            .keep_dirs_for_size = opt.recursive,
+            .exts = opt.exts,
+            .matches = opt.matches,
+            .changed_within = opt.changed_within,
+            .size_range = opt.size_range,
+            .changed_within_now = changed_within_now,
+        };
 
-            item.name = try name_pool.store(base_name);
+        for (paths) |path| {
+            const parent_path = std.fs.path.dirname(path) orelse ".";
+            const base_name = std.fs.path.basename(path);
 
-            if (!opt.show_detail and !opt.recursive) {
-                max_len = item.name.len + 2;
-            }
+            const parent_dir = try cwd.openDir(io, parent_path, .{});
+            defer parent_dir.close(io);
 
-            if (opt.report) {
-                if (item.is_dir) {
-                    total_folders = 1;
-                } else {
-                    total_files = 1;
+            const stat = try parent_dir.statFile(io, base_name, .{});
+            const entry: std.Io.Dir.Entry = .{
+                .name = base_name,
+                .kind = stat.kind,
+                .inode = 0,
+            };
+
+            if (try file.File.init(
+                allocator,
+                io,
+                &entry,
+                &parent_dir,
+                file_opt,
+                &username_inventory,
+                &groupname_inventory,
+            )) |single_file| {
+                var item = single_file;
+                errdefer if (item.symlink_target) |target| allocator.free(target);
+
+                item.name = try name_pool.store(path);
+
+                if (!opt.show_detail and !opt.recursive) {
+                    const curr_len = item.name.len + 2;
+                    if (curr_len > max_len) {
+                        max_len = curr_len;
+                    }
                 }
+
+                if (opt.report) {
+                    if (item.is_dir) {
+                        total_folders += 1;
+                    } else {
+                        total_files += 1;
+                    }
+                }
+
+                try files.append(allocator, item);
             }
-
-            try files.append(allocator, item);
         }
 
-        if (opt.show_git and git.isGitRepo(allocator, io, parent_path)) {
-            git_inventory = try git.getFileStatuses(allocator, io, parent_path);
-            loaded_git = true;
+        if (opt.show_git and paths.len > 0) {
+            const git_path = std.fs.path.dirname(paths[0]) orelse ".";
+            if (git.isGitRepo(allocator, io, git_path)) {
+                git_inventory = try git.getFileStatuses(allocator, io, git_path);
+                loaded_git = true;
+            }
         }
+
+        try sort(allocator, files.items, opt.dir_grouping, opt.sort_type, opt.reverse);
 
         return .{
             .max_display_len = max_len,
@@ -342,7 +364,7 @@ pub const Files = struct {
     /// Return the git status for a file name, if one was loaded.
     pub inline fn gitStatus(self: Self, name: []const u8) ?git.GitStatus {
         if (!self.loaded_git) return null;
-        return self.git_inventory.get(name);
+        return self.git_inventory.get(std.fs.path.basename(name));
     }
 
     /// Return the options used to create this listing.
@@ -535,4 +557,18 @@ test "without recursive directory size directory keeps stat size" {
     }
 
     try testing.expect(found_dir);
+}
+
+test "initFromPaths keeps the given path as the name" {
+    const io = testing.io;
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+
+    const paths = [_][]const u8{ "src/main.zig", "src/zlist.zig" };
+    var files = try Files.initFromPaths(arena.allocator(), io, &paths, .{});
+    defer files.deinit();
+
+    try testing.expectEqual(@as(usize, 2), files.entries().len);
+    try testing.expectEqualStrings("src/main.zig", files.entries()[0].name);
+    try testing.expectEqualStrings("src/zlist.zig", files.entries()[1].name);
 }
