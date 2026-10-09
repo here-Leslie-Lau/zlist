@@ -207,6 +207,26 @@ pub fn list(
     }
 }
 
+/// One name per line, in the current sort order. No grid padding.
+pub fn listOneline(
+    files: zlist.Files,
+    term: Terminal,
+    comptime mode_opt: ModeOptionsComptime,
+    config: cfg.Config,
+) !void {
+    for (files.entries()) |val| {
+        if (!mode_opt.pure) {
+            const icon = getIcon(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config);
+            try term.setColor(getColor(val.is_dir, val.is_symlink, val.is_symlink_to_dir, val.name, config));
+            try term.writer.print("{s}{s}", .{ icon, val.name });
+            try term.setColor(Terminal.Color.reset);
+        } else {
+            try term.writer.print("{s}", .{val.name});
+        }
+        try term.writer.print("\n", .{});
+    }
+}
+
 /// list files in detail mode
 pub fn listDetail(
     files: zlist.Files,
@@ -499,6 +519,30 @@ inline fn getGitStatusColor(files: zlist.Files, name: []const u8) Terminal.Color
         .unmerged => Terminal.Color.bright_red,
         .none => Terminal.Color.reset,
     };
+}
+
+test "oneline prints one name per line" {
+    const io = std.testing.io;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "b.txt", .data = "b" });
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "a.txt", .data = "a" });
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var files = try zlist.Files.init(arena.allocator(), io, tmp_dir.dir, .{});
+    defer files.deinit();
+
+    var output_buf: [256]u8 = undefined;
+    var output_writer: std.Io.Writer = .fixed(&output_buf);
+    const term = Terminal{ .writer = &output_writer, .mode = .no_color };
+
+    try listOneline(files, term, .{ .pure = true }, .{});
+
+    try std.testing.expectEqualStrings("a.txt\nb.txt\n", output_writer.buffered());
 }
 
 test "detail size column expands to fit its widest value" {

@@ -152,6 +152,9 @@ $ zl --help
     -p, --pure
             Show names only, without colors or icons.
 
+    -1, --oneline
+            One entry per line. Ignored with -l and -r.
+
         --color <COLORUSE>
             When to use terminal colors. Default: auto. OPTIONS: auto, always, never.
 

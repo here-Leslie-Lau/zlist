@@ -11,6 +11,8 @@ pub const CliConfig = struct {
     /// Root display options in recursive mode
     root_display: render.RootDisplay,
     pure: bool,
+    /// One entry per line instead of the grid. Ignored with -l and -r.
+    oneline: bool,
     color_use: render.ColorUse,
     /// From `-C/--config`. Null keeps built-in defaults.
     config_path: ?[]const u8 = null,
@@ -22,6 +24,7 @@ const default_paths = [_][]const u8{"."};
 pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliConfig {
     var opt = zlist.FilesOptions{ .recursion_level = 0 };
     var pure = false;
+    var oneline = false;
     var paths: []const []const u8 = &default_paths;
 
     // Render visibility flags are part of the parsed CLI config.
@@ -64,6 +67,10 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
 
     if (res.args.pure != 0) {
         pure = true;
+    }
+
+    if (res.args.oneline != 0) {
+        oneline = true;
     }
 
     const color_use = res.args.color orelse .auto;
@@ -118,6 +125,7 @@ pub inline fn parseCliConfig(allocator: std.mem.Allocator, res: anytype) !CliCon
         .long_view_opt = long_view_opt,
         .root_display = root_display,
         .pure = pure,
+        .oneline = oneline,
         .color_use = color_use,
         .config_path = res.args.config,
         .paths = paths,
