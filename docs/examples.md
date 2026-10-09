@@ -19,6 +19,12 @@ zl -la -s length
 zl -p
 ```
 
+**One name per line, handy for pipes:**
+```bash
+zl -1
+zl -1p
+```
+
 ## Long View
 
 **Show the long view:**

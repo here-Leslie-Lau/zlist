@@ -31,6 +31,7 @@ const params_desc: []const u8 = blk: {
     \\-L, --level <INT>                Limit recursion depth. 0 means no limit.
     \\    --root-display <ROOTDISPLAY> Changes how root dir is displayed in recursive view. Default: dot. OPTIONS: dot, name, none.
     \\-p, --pure                       Show names only, without colors or icons.
+    \\-1, --oneline                    One entry per line. Ignored with -l and -r.
     \\    --color <COLORUSE>           When to use terminal colors. Default: auto. OPTIONS: auto, always, never.
     \\    --report                     Show a short summary of files and folders.
     \\-d, --dir                        Only show directories. If used with -D, both are ignored.
@@ -142,7 +143,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         opt.path = file_paths.items[0];
         var files = try zlist.Files.initFromPaths(allocator, io, file_paths.items, opt);
         defer files.deinit();
-        try printFiles(io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.color_use, config, &files, null);
+        try printFiles(io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.oneline, cli.color_use, config, &files, null);
         listed_anything = true;
     }
 
@@ -168,7 +169,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         };
         defer dir.close(io);
 
-        try runForDirectory(allocator, io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.color_use, config, dir);
+        try runForDirectory(allocator, io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.oneline, cli.color_use, config, dir);
         listed_anything = true;
     }
 }
@@ -193,6 +194,7 @@ inline fn runForDirectory(
     long_view_opt: render.LongViewOptions,
     root_display: render.RootDisplay,
     pure: bool,
+    oneline: bool,
     color_use: render.ColorUse,
     config: cfg.Config,
     dir: std.Io.Dir,
@@ -200,7 +202,7 @@ inline fn runForDirectory(
     var files = try zlist.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, color_use, config, &files, dir);
+    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, oneline, color_use, config, &files, dir);
 }
 
 fn printFiles(
@@ -210,6 +212,7 @@ fn printFiles(
     long_view_opt: render.LongViewOptions,
     root_display: render.RootDisplay,
     pure: bool,
+    oneline: bool,
     color_use: render.ColorUse,
     config: cfg.Config,
     files: *zlist.Files,
@@ -248,6 +251,12 @@ fn printFiles(
                 true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, config),
                 false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, config),
             }
+        }
+    } else if (oneline) {
+        // -l and -r already took the branches above.
+        switch (pure) {
+            true => try render.listOneline(files.*, term, .{ .pure = true }, config),
+            false => try render.listOneline(files.*, term, .{ .pure = false }, config),
         }
     } else {
         // normal format
