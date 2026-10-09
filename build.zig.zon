@@ -1,6 +1,7 @@
 .{
     .name = .zlist,
     .version = "0.1.15",
+    .minimum_zig_version = "0.18.0-dev.120+9fe22a29b",
     .dependencies = .{
         .clap = .{
             .url = "git+https://github.com/Hejsil/zig-clap#05faf3905e8548f5cc269a8836e154065e70128d",

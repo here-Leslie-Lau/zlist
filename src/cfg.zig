@@ -80,10 +80,20 @@ pub fn load(allocator: std.mem.Allocator, io: std.Io, path: ?[]const u8) !Config
     );
     defer allocator.free(source);
 
-    const file = try std.zon.parse.fromSliceAlloc(File, allocator, source, null, .{
+    var diagnostics: std.zon.parse.Diagnostics = undefined;
+    const file = std.zon.parse.fromSlice(File, .{
+        .gpa = allocator,
+        .arena = allocator,
+        .source = source,
+        .diagnostics = &diagnostics,
         .ignore_unknown_fields = true,
-        .free_on_error = false,
-    });
+    }) catch |err| switch (err) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.ParseZon => {
+            diagnostics.log(file_path);
+            return error.ParseZon;
+        },
+    };
     return try configFromFile(allocator, file);
 }
 
