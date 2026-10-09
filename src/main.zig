@@ -143,7 +143,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         opt.path = file_paths.items[0];
         var files = try zlist.Files.initFromPaths(allocator, io, file_paths.items, opt);
         defer files.deinit();
-        try printFiles(io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.oneline, cli.color_use, config, &files, null);
+        try printFiles(io, stdout_file, &cli, opt, config, &files, null);
         listed_anything = true;
     }
 
@@ -169,7 +169,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         };
         defer dir.close(io);
 
-        try runForDirectory(allocator, io, stdout_file, opt, cli.long_view_opt, cli.root_display, cli.pure, cli.oneline, cli.color_use, config, dir);
+        try runForDirectory(allocator, io, stdout_file, &cli, opt, config, dir);
         listed_anything = true;
     }
 }
@@ -190,30 +190,22 @@ inline fn runForDirectory(
     allocator: std.mem.Allocator,
     io: std.Io,
     stdout_file: std.Io.File,
+    cli: *const cli_args.CliConfig,
     opt: zlist.FilesOptions,
-    long_view_opt: render.LongViewOptions,
-    root_display: render.RootDisplay,
-    pure: bool,
-    oneline: bool,
-    color_use: render.ColorUse,
     config: cfg.Config,
     dir: std.Io.Dir,
 ) !void {
     var files = try zlist.Files.init(allocator, io, dir, opt);
     defer files.deinit();
 
-    try printFiles(io, stdout_file, opt, long_view_opt, root_display, pure, oneline, color_use, config, &files, dir);
+    try printFiles(io, stdout_file, cli, opt, config, &files, dir);
 }
 
 fn printFiles(
     io: std.Io,
     stdout_file: std.Io.File,
+    cli: *const cli_args.CliConfig,
     opt: zlist.FilesOptions,
-    long_view_opt: render.LongViewOptions,
-    root_display: render.RootDisplay,
-    pure: bool,
-    oneline: bool,
-    color_use: render.ColorUse,
     config: cfg.Config,
     files: *zlist.Files,
     dir: ?std.Io.Dir,
@@ -224,43 +216,43 @@ fn printFiles(
 
     var stdout_buf: [4096]u8 = undefined;
     var stdout_writer = stdout_file.writer(io, &stdout_buf);
-    const term = try render.getTerminal(io, &stdout_writer.interface, stdout_file, color_use);
+    const term = try render.getTerminal(io, &stdout_writer.interface, stdout_file, cli.color_use);
 
     if (opt.show_detail) {
         // long format
-        switch (pure) {
-            true => try render.listDetail(files.*, term, .{ .pure = true }, long_view_opt, config),
-            false => try render.listDetail(files.*, term, .{ .pure = false }, long_view_opt, config),
+        switch (cli.pure) {
+            true => try render.listDetail(files.*, term, .{ .pure = true }, cli.long_view_opt, config),
+            false => try render.listDetail(files.*, term, .{ .pure = false }, cli.long_view_opt, config),
         }
     } else if (opt.recursive) {
         // recursive
         if (dir) |opened_dir| {
             var root_dir: []const u8 = undefined;
-            if (root_display == .name) {
+            if (cli.root_display == .name) {
                 var buf: [std.Io.Dir.max_path_bytes]u8 = undefined;
                 const len = try std.Io.Dir.cwd().realPathFile(io, opt.path, &buf);
                 root_dir = std.fs.path.basename(buf[0..len]);
             }
 
-            switch (pure) {
-                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, root_display, config),
-                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, root_display, config),
+            switch (cli.pure) {
+                true => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = true }, cli.root_display, config),
+                false => try render.listRecursive(root_dir, files, term, "", true, opened_dir, .{ .pure = false }, cli.root_display, config),
             }
         } else {
-            switch (pure) {
+            switch (cli.pure) {
                 true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, config),
                 false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, config),
             }
         }
-    } else if (oneline) {
+    } else if (cli.oneline) {
         // -l and -r already took the branches above.
-        switch (pure) {
+        switch (cli.pure) {
             true => try render.listOneline(files.*, term, .{ .pure = true }, config),
             false => try render.listOneline(files.*, term, .{ .pure = false }, config),
         }
     } else {
         // normal format
-        switch (pure) {
+        switch (cli.pure) {
             true => try render.list(files.*, term, stdout_file.handle, .{ .pure = true }, config),
             false => try render.list(files.*, term, stdout_file.handle, .{ .pure = false }, config),
         }
