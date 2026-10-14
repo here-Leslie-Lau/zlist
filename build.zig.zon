@@ -1,6 +1,6 @@
 .{
     .name = .zlist,
-    .version = "0.1.15",
+    .version = "0.1.16",
     .minimum_zig_version = "0.18.0-dev.120+9fe22a29b",
     .dependencies = .{
         .clap = .{

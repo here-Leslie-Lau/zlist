@@ -67,7 +67,7 @@ Download the latest binary for your system from the [Releases](https://github.co
 
 ### From Source
 
-Requirements: `zig` (master/0.17.0-dev recommended).
+Requirements: `zig` `0.18.0-dev.120+9fe22a29b` or later (the minimum version declared in `build.zig.zon`).
 
 ```bash
 # 1. Clone the repo
