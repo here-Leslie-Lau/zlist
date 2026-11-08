@@ -490,13 +490,12 @@ pub const File = struct {
                     return str;
                 }
 
-                const passwd = std.c.getpwuid(uid);
-                if (passwd == null) {
-                    return null;
-                }
+                const name_opt: ?[]const u8 = if (std.c.getpwuid(uid)) |pw| std.mem.span(pw.name) else null;
+                const owned_str = (if (name_opt) |n|
+                    allocator.dupe(u8, n)
+                else
+                    std.fmt.allocPrint(allocator, "{d}", .{uid})) catch return null;
 
-                const str = std.mem.span(passwd.?.*.name) orelse return null;
-                const owned_str = allocator.dupe(u8, str) catch return null;
                 ui.put(uid, owned_str) catch {
                     allocator.free(owned_str);
                     return null;
@@ -510,13 +509,12 @@ pub const File = struct {
                     return str;
                 }
 
-                const group = std.c.getgrgid(gid);
-                if (group == null) {
-                    return null;
-                }
+                const name_opt: ?[]const u8 = if (std.c.getgrgid(gid)) |gr| std.mem.span(gr.name) else null;
+                const owned_str = (if (name_opt) |n|
+                    allocator.dupe(u8, n)
+                else
+                    std.fmt.allocPrint(allocator, "{d}", .{gid})) catch return null;
 
-                const str = std.mem.span(group.?.*.name) orelse return null;
-                const owned_str = allocator.dupe(u8, str) catch return null;
                 gi.put(gid, owned_str) catch {
                     allocator.free(owned_str);
                     return null;
