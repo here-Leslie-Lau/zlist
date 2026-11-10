@@ -44,9 +44,10 @@ pub const GitStatus = enum {
 
 inline fn parseStatusCode(x: u8, y: u8) GitStatus {
     // Priority: unmerged > deleted > renamed > modified > added > untracked
-    if (x == 'U' or y == 'U' or x == 'A' and y == 'A' or x == 'D' and y == 'D') {
+    if (x == 'U' or y == 'U' or (x == 'A' and y == 'A') or (x == 'D' and y == 'D')) {
         return .unmerged;
     }
+
     if (x == 'D' or y == 'D') return .deleted;
     if (x == 'R' or y == 'R') return .renamed;
     if (x == 'M' or y == 'M') return .modified;
