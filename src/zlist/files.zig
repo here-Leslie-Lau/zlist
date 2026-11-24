@@ -103,24 +103,29 @@ pub const Files = struct {
             errdefer if (fs.symlink_target) |target| allocator.free(target);
 
             fs.name = try name_pool.store(entry.name);
+            try files.append(allocator, fs);
+        }
 
+        if (opt.git_ignore and files.items.len > 0) {
+            try filterGitIgnored(allocator, io, dir, &files);
+        }
+
+        for (files.items) |item| {
             if (!opt.show_detail and !opt.recursive) {
                 // get display length of the name, including icon(len is 2), just in normal mode
-                const curr_len = fs.name.len + 2;
+                const curr_len = item.name.len + 2;
                 if (curr_len > max_len) {
                     max_len = curr_len;
                 }
             }
 
             if (opt.report) {
-                if (fs.is_dir) {
+                if (item.is_dir) {
                     total_folders += 1;
                 } else {
                     total_files += 1;
                 }
             }
-
-            try files.append(allocator, fs);
         }
 
         if (needs_recursive_dir_size) {
@@ -305,6 +310,33 @@ pub const Files = struct {
             opt.changed_within != null or
             opt.size_range != null or
             needs_recursive_dir_size;
+    }
+
+    /// Drop entries git ignores so callers never display or recurse into them.
+    fn filterGitIgnored(
+        allocator: mem.Allocator,
+        io: std.Io,
+        dir: std.Io.Dir,
+        files: *std.ArrayList(file.File),
+    ) !void {
+        const names = try allocator.alloc([]const u8, files.items.len);
+        defer allocator.free(names);
+        for (files.items, 0..) |item, i| names[i] = item.name;
+
+        var ignored = try git.ignoredNames(allocator, io, dir, names);
+        defer ignored.deinit(allocator);
+        if (ignored.isEmpty()) return;
+
+        var kept: usize = 0;
+        for (files.items) |item| {
+            if (ignored.contains(item.name)) {
+                if (item.symlink_target) |target| allocator.free(target);
+                continue;
+            }
+            files.items[kept] = item;
+            kept += 1;
+        }
+        files.items.len = kept;
     }
 
     pub fn deinit(self: *Self) void {

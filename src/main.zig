@@ -37,6 +37,7 @@ const params_desc: []const u8 = blk: {
     \\-d, --dir                        Only show directories. If used with -D, both are ignored.
     \\-D, --no_dir                     Only show files. If used with -d, both are ignored.
     \\-g, --git                        Show git status in long view.
+    \\-I, --git-ignore                 Skip entries ignored by git.
     \\-e, --ext <str>...               Filter by extension (e.g. --ext zig,md,ts).
     \\-m, --match <str>...             Filter names by substring (e.g. --match main,readme).
     \\-C, --config <str>               Load config from a .zon file.

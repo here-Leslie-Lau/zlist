@@ -52,6 +52,8 @@ pub const FilesOptions = struct {
     /// if true, it will show git status of files and folders.
     /// which can be slow for large repositories. Default is false.
     show_git: bool = false,
+    /// skip entries ignored by git. No-op outside a git repo or when git is unavailable.
+    git_ignore: bool = false,
     /// path from args
     path: []const u8 = ".",
     /// To filter files by extension, only show files with the specified extensions.
