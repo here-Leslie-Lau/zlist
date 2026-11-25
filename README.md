@@ -1,14 +1,14 @@
 # zlist
 
-> A modern, colorful alternative to `ls` built with **Zig**.
+> A colorful `ls` alternative written in **Zig**.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)](https://github.com/here-Leslie-Lau/zlist)
 [![Zig Version](https://img.shields.io/badge/zig-0.18.0_dev-orange?style=flat-square)](https://ziglang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**Note**: This is my **first CLI tool in Zig**! 🚀
+**Note**: This is my **first CLI tool in Zig**!
 
-I built this project to learn Zig, get comfortable with manual memory management, and explore the standard library. It might not be the fastest or smallest `ls` clone (yet), but it's usable today and still getting better.
+I built this to learn Zig, get comfortable with manual memory management, and explore the standard library. It might not be the fastest or smallest `ls` clone (yet), but it's usable today and still getting better.
 
 ## Table of Contents
 
@@ -26,16 +26,16 @@ I built this project to learn Zig, get comfortable with manual memory management
 
 Already pretty capable for a learning project:
 
-*   **Compact grid layout** that stays easy to scan.
-*   **Color and Nerd Font icons** for common file types and languages.
-*   **Readable long view** with permissions, owner, size, and timestamps.
-*   **Optional recursive directory size** in long view and size sorting.
-*   **Multiple sort modes** including name, length, directories first, mtime, and size.
-*   **Recursive listing** with optional depth limits.
-*   **Useful filters** for files, directories, extensions, names, size, and modified time.
-*   **Quick summary report** for file and folder counts.
-*   **Git status indicators** in long view.
-*   **Configurable icons and colors** via a `.zon` file (`-C`).
+*   **Dynamic grid layout** sized to your terminal width, plus `-1` one-per-line mode.
+*   **Colors and Nerd Font icons** for common file types and languages.
+*   **Long view (`-l`)** with permissions, owner, size, timestamps, and toggleable columns.
+*   **Recursive directory sizes (`--du`)** for long view and size sorting.
+*   **Sorting** by name, length, modification time, size, and directory grouping (`-G`).
+*   **Recursive tree view (`-r`)** with optional depth limits (`-L`).
+*   **Filters** by file/directory, extension, name substring, size, and modified time.
+*   **Summary report (`--report`)** with file and folder counts.
+*   **Git integration** for file status in long view (`-g`) and skipping gitignored entries (`-I`).
+*   **Custom icons and colors** via a `.zon` config file (`-C`).
 
 <a id="preview"></a>
 ## Preview
@@ -44,7 +44,7 @@ Already pretty capable for a learning project:
 ![Preview2](pics/screenshot2.png)
 ![Preview3](pics/screenshot3.png)
 
-*(Make sure you have a [Nerd Font](https://www.nerdfonts.com/) installed in your terminal to see the icons!)*
+*(You'll need a [Nerd Font](https://www.nerdfonts.com/) in your terminal for icons to render properly.)*
 
 <a id="installation"></a>
 ## Installation
@@ -55,39 +55,36 @@ Install with Homebrew:
 
 ```bash
 brew tap here-leslie-lau/tap
-# Maybe need trust
 brew install zlist
 ```
 
 ### Precompiled Binaries
 
-Download the latest binary for your system from the [Releases](https://github.com/here-Leslie-Lau/zlist/releases) page.
+Grab the latest binary for your platform from the [Releases](https://github.com/here-Leslie-Lau/zlist/releases) page.
 
-> **Note**: Windows is currently **not supported** due to differences in file system APIs. Support may be added in future versions.
+> **Note**: Windows isn't supported yet due to filesystem API differences.
 
 ### From Source
 
-Requirements: `zig` (master/0.18.0-dev recommended).
+Requires `zig` (master / 0.18.0-dev).
 
 ```bash
 # 1. Clone the repo
 git clone git@github.com:here-Leslie-Lau/zlist.git
 cd zlist
 
-# 2. Build in release mode [ReleaseFast, ReleaseSafe, ReleaseSmall]
+# 2. Build in release mode (ReleaseFast, ReleaseSafe, or ReleaseSmall)
 zig build -Doptimize=ReleaseFast
 
-# 3. Run it. (Optional: add to PATH, it's up to you.)
+# 3. Run it (optionally add it to your PATH)
 ./zig-out/bin/zl
 ```
 
 <a id="usage"></a>
 ## Usage
 
-Just run:
-
 ```bash
-zl [OPTIONS] [PATH]
+zl [OPTIONS] [PATH]...
 ```
 
 ```bash
@@ -125,14 +122,14 @@ $ zl --help
         --du
             Show recursive directory size in long view and size sort. This is the sum of file sizes, not the same as `du` disk usage.
 
-        --dir-grouping <DIRGROUPING>
+    -G, --dir-grouping <DIRGROUPING>
             Group directories before or after files. Default: none. OPTIONS: none, before, after.
 
     -s, --sort <SORTTYPE>
             Sort results. Default: name. OPTIONS: name, length, mtime, size.
 
-        --reverse
-            Reverse sort.
+    -R, --reverse
+            Reverse sort
 
         --size <str>...
             Filter files by size range (e.g. --size gt:10K --size lte:2M).
@@ -158,7 +155,7 @@ $ zl --help
         --color <COLORUSE>
             When to use terminal colors. Default: auto. OPTIONS: auto, always, never.
 
-    -R, --report
+        --report
             Show a short summary of files and folders.
 
     -d, --dir
@@ -169,6 +166,9 @@ $ zl --help
 
     -g, --git
             Show git status in long view.
+
+    -I, --git-ignore
+            Skip entries ignored by git.
 
     -e, --ext <str>...
             Filter by extension (e.g. --ext zig,md,ts).
@@ -182,9 +182,9 @@ $ zl --help
     <str>...
 ```
 
-For common commands examples, see [zlist examples](docs/examples.md).
+For common usage examples, see [zlist examples](docs/examples.md).
 
-Icons and colors are configurable too:
+Icons and colors are configurable via a `.zon` file:
 
 ```bash
 zl -C zlist.zon
@@ -273,8 +273,9 @@ Numbers move with cache, load, and FS. YMMV.
 *   [x] Extension filter (`-e`, `--ext`)
 *   [x] Name match filter (`-m`, `--match`)
 *   [x] Smart dynamic grid layout
-*   [x] Summary report (`-R`)
+*   [x] Summary report (`--report`)
 *   [x] Git status integration (`-g`)
+*   [x] Gitignore filtering (`-I`, `--git-ignore`)
 *   [x] Recursive directory size (`--du`)
 *   [x] Lib API for embedding in other Zig projects
 *   [x] Custom color/icon configurations (`-C`)
@@ -283,14 +284,14 @@ Numbers move with cache, load, and FS. YMMV.
 <a id="contributing"></a>
 ## Contributing
 
-Got an idea? Found a bug? Open an issue or send a PR. This is a fun side project, and contributions are always welcome.
+Got an idea? Found a bug? Open an issue or send a PR. This is a side project, and contributions are always welcome.
 
 1.  Fork it
-2.  Create your feature branch (`git checkout -b feature/cool-thing`)
+2.  Create a feature branch (`git checkout -b feature/cool-thing`)
 3.  Commit your changes
 4.  Push to the branch
 5.  Open a Pull Request
 
 ---
 
-*Crafted with ❤️ in Zig.*
+*Built with Zig.*
